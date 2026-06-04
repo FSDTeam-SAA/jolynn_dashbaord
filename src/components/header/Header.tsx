@@ -1,21 +1,28 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
-export default function Header() {
+import { Menu } from "lucide-react";
+
+interface HeaderProps {
+  setSidebarOpen: (open: boolean) => void;
+}
+
+export default function Header({ setSidebarOpen }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
+
   const { data: session } = useSession();
-    const user = session?.user as any;
-    const email = user?.email;
-    console.log(session)
 
-    
+  const user = session?.user as {
+    email?: string;
+  };
 
-  // Close dropdown when clicking outside
+  const email = user?.email;
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -29,28 +36,39 @@ export default function Header() {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex h-[80px] items-center justify-between px-6 bg-[#212121] shadow-md">
-      <div className="flex items-center space-x-2"></div>
+    <div className="fixed top-0 left-0 right-0 z-30 h-[80px] flex items-center justify-between px-4 md:px-6 bg-[#FAF6EE]">
+      {/* Mobile Menu */}
+      <button
+        className="lg:hidden"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <Menu className="w-6 h-6" />
+      </button>
 
-      <div className="relative flex items-center space-x-3">
+      <div />
+
+      <div className="relative flex items-center">
         <div
           ref={avatarRef}
-          className="flex items-center space-x-2 text-white text-sm cursor-pointer hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
-          onClick={toggleDropdown}
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <span>{email}</span>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg?height=32&width=32" />
-            <AvatarFallback className="text-black">TA</AvatarFallback>
+          <span className="hidden sm:block text-sm text-black">
+            {email}
+          </span>
+
+          <Avatar className="h-9 w-9">
+            <AvatarImage src="/placeholder.svg" />
+            <AvatarFallback className="text-black">
+              TA
+            </AvatarFallback>
           </Avatar>
         </div>
       </div>

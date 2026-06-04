@@ -8,9 +8,9 @@ import {
   LogOut,
   PackageOpen,
   TruckElectric,
+  X,
 } from "lucide-react";
 import Image from "next/image";
-// import { LogoutModal } from "../modal/Logout";
 import { useState } from "react";
 
 const navigation = [
@@ -24,86 +24,102 @@ const navigation = [
     name: "My delivary",
     href: "/my-delivary",
     icon: TruckElectric,
-  }
+  },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export function Sidebar({ open, setOpen }: SidebarProps) {
   const pathname = usePathname();
-   const [open, setOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
-    <div className="flex h-screen sticky bottom-0 top-0 w-[350px] flex-col bg-[#212121] z-50">
-      {/* Logo */}
-      <div className="h-[80px] flex items-center justify-start ml-3">
-        <div className="text-2xl flex gap-1 font-bold text-blue-600 uppercase tracking-wider">
-          <div className="h-[50px] w-[50px]">
-            <Image
-              src="/images/dashboardLogo.gif"
-              alt=""
-              height={200}
-              width={200}
-              className="object-cover"
-            />
-          </div>
-          <div>
-            <h1 className="text-green-500">
-              T<span className="text-red-400">O</span>MAT
-              <span className="text-red-400">O</span>
-            </h1>
-            <p className="text-white text-[10px]">Tomaot.LID</p>
-          </div>
+    <>
+      {/* Mobile Overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <div
+        className={cn(
+          "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[320px] bg-[#FAF6EE] z-50 flex flex-col transition-transform duration-300",
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {/* Mobile Close Button */}
+        <div className="absolute right-4 top-4 lg:hidden">
+          <button onClick={() => setOpen(false)}>
+            <X className="w-6 h-6" />
+          </button>
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-2 flex flex-col items-center justify-start px-3 overflow-y-auto mt-3">
-        {navigation.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+        {/* Logo */}
+        <div className="h-[80px] flex items-center justify-center">
+          <Image
+            src="/images/logo.png"
+            alt="Logo"
+            width={120}
+            height={120}
+            priority
+          />
+        </div>
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex w-[90%] mx-auto items-center justify-start gap-2 space-y-1 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-white text-black"
-                  : "text-slate-300 hover:bg-slate-600/50 hover:text-white"
-              )}
-            >
-              <item.icon
+        {/* Navigation */}
+        <nav className="flex-1 space-y-2 flex flex-col items-center px-3 overflow-y-auto mt-3">
+          {navigation.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setOpen(false)}
                 className={cn(
-                  "h-6 w-6 transition-colors duration-200",
-                  isActive ? "text-black" : ""
-                )}
-              />
-              <span
-                className={cn(
-                  "font-normal text-base leading-[120%] transition-colors duration-200 text-center",
-                  isActive ? "text-black font-medium" : ""
+                  "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-white text-black"
+                    : "text-slate-500 hover:bg-slate-200"
                 )}
               >
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+                <item.icon
+                  className={cn(
+                    "h-5 w-5",
+                    isActive ? "text-black" : "text-slate-500"
+                  )}
+                />
 
-       {/* Logout fixed at bottom */}
-      <div className="p-6">
-        <div onClick={() => setOpen(true)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:bg-slate-600/50 hover:text-white cursor-pointer">
-          <LogOut className="h-5 w-5" />
-          <span className="font-normal text-base leading-none">Log Out</span>
+                <span
+                  className={cn(
+                    "text-base",
+                    isActive ? "font-semibold" : ""
+                  )}
+                >
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-6">
+          <div
+            onClick={() => setLogoutOpen(true)}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-200 cursor-pointer"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="text-base">Log Out</span>
+          </div>
         </div>
       </div>
-
-      {/* <LogoutModal
-        open={open}
-        onClose={() => setOpen(false)}
-      /> */}
-    </div>
+    </>
   );
 }

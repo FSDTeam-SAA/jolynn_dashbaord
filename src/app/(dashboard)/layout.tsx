@@ -1,22 +1,28 @@
-// import AppProvider from "@/provider/AppProvider";
+"use client";
+
+import React, { useState } from "react";
 import Header from "@/components/header/Header";
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import React from "react";
 
-function layout({ children }: { children: React.ReactNode }) {
+function Layout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <>
-      <Header />
+      <Header setSidebarOpen={setSidebarOpen} />
+
       <div className="flex">
-        <Sidebar />
-        <div className="w-full mt-[80px] p-6">
-          {/* <AppProvider> */}
-            {children}
-            {/* </AppProvider> */}
-        </div>
+        <Sidebar
+          open={sidebarOpen}
+          setOpen={setSidebarOpen}
+        />
+
+        <main className="w-full lg:ml-0 mt-[80px] p-4 md:p-6 overflow-x-auto">
+          {children}
+        </main>
       </div>
     </>
   );
 }
 
-export default layout;
+export default Layout;

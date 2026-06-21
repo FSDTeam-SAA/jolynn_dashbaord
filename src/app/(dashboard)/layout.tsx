@@ -17,7 +17,8 @@ function Layout({ children }: { children: React.ReactNode }) {
           setOpen={setSidebarOpen}
         />
 
-        <main className="w-full lg:ml-0 mt-[80px] p-4 md:p-6 overflow-x-auto">
+
+        <main className="w-full lg:ml-0 mt-[100px] p-4 md:p-6 overflow-x-auto">
           {children}
         </main>
       </div>

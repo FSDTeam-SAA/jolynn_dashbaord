@@ -4,26 +4,98 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
+  Binoculars,
+  CalendarRange,
+  ClipboardPenLine,
+  CreditCard,
+  FolderRoot,
+  GraduationCap,
+  HousePlus,
   LayoutDashboard,
   LogOut,
-  PackageOpen,
-  TruckElectric,
+  MapPin,
+  MapPinned,
+  Newspaper,
+  Plane,
+  Settings,
+  StickyNote,
+  UserRound,
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { signOut } from "next-auth/react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard Overview", href: "/", icon: LayoutDashboard },
   {
-    name: "Requested delivary",
-    href: "/requested-delivary",
-    icon: PackageOpen,
+    name: "Payments",
+    href: "/payments",
+    icon: CreditCard,
   },
   {
-    name: "My delivary",
-    href: "/my-delivary",
-    icon: TruckElectric,
+    name: "Visa Applications",
+    href: "/visa-applications",
+    icon: Plane,
+  },
+  {
+    name: "Student Applications",
+    href: "/student-applications",
+    icon: GraduationCap,
+  },
+  {
+    name: "Tour Booking",
+    href: "/tour-booking",
+    icon: MapPin,
+  },
+  {
+    name: "Consultation",
+    href: "/consultation",
+    icon: CalendarRange,
+  },
+  {
+    name: "Users Management",
+    href: "/users-management",
+    icon: UserRound,
+  },
+  {
+    name: "Countries",
+    href: "/countries",
+    icon: MapPinned,
+  },
+  {
+    name: "Visa Types",
+    href: "/visa-types",
+    icon: StickyNote,
+  },
+  {
+    name: "Universities ",
+    href: "/universities",
+    icon: HousePlus,
+  },
+  {
+    name: "Programs",
+    href: "/programs",
+    icon: ClipboardPenLine,
+  },
+  {
+    name: "Tour Packages",
+    href: "/tour-packages",
+    icon: Binoculars,
+  },
+  {
+    name: "Blog Management",
+    href: "/blog-management",
+    icon: FolderRoot,
+  },
+  {
+    name: "Newsletter",
+    href: "/newsletter",
+    icon: Newspaper,
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
   },
 ];
 
@@ -34,7 +106,6 @@ interface SidebarProps {
 
 export function Sidebar({ open, setOpen }: SidebarProps) {
   const pathname = usePathname();
-  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <>
@@ -49,7 +120,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
       <div
         className={cn(
           "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[320px] bg-[#FAF6EE] z-50 flex flex-col transition-transform duration-300",
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Mobile Close Button */}
@@ -64,7 +135,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
           <Image
             src="/images/logo.png"
             alt="Logo"
-            width={120}
+            width={150}
             height={120}
             priority
           />
@@ -83,24 +154,21 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
+                  "flex w-full items-center gap-3 rounded-[8px] px-4 py-[8px] text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-white text-black"
-                    : "text-slate-500 hover:bg-slate-200"
+                    ? "bg-[#CD9B46] text-white"
+                    : "text-[#616161] hover:bg-slate-200",
                 )}
               >
                 <item.icon
                   className={cn(
                     "h-5 w-5",
-                    isActive ? "text-black" : "text-slate-500"
+                    isActive ? "text-white" : "text-[#616161]",
                   )}
                 />
 
                 <span
-                  className={cn(
-                    "text-base",
-                    isActive ? "font-semibold" : ""
-                  )}
+                  className={cn("text-base", isActive ? "font-semibold" : "")}
                 >
                   {item.name}
                 </span>
@@ -111,13 +179,14 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
         {/* Logout */}
         <div className="p-6">
-          <div
-            onClick={() => setLogoutOpen(true)}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-200 cursor-pointer"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 cursor-pointer transition-all duration-300 hover:bg-red-50 hover:text-red-600"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 transition-colors duration-300" />
             <span className="text-base">Log Out</span>
-          </div>
+          </button>
         </div>
       </div>
     </>

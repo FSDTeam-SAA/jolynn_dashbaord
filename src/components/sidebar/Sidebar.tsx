@@ -11,9 +11,9 @@ import {
   LogOut,
   MapPin,
   MapPinned,
-  Plane,
   StickyNote,
   UserRound,
+  Wrench,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -27,9 +27,9 @@ const navigation = [
     icon: CreditCard,
   },
   {
-    name: "Visa Applications",
-    href: "/visa-applications",
-    icon: Plane,
+    name: "Service Management",
+    href: "/service-management",
+    icon: Wrench,
   },
   {
     name: "Student Applications",
@@ -47,8 +47,8 @@ const navigation = [
     icon: CalendarRange,
   },
   {
-    name: "Users Management",
-    href: "/users-management",
+    name: "User Management",
+    href: "/user-management",
     icon: UserRound,
   },
   {

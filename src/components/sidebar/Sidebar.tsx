@@ -22,8 +22,8 @@ import { signOut } from "next-auth/react";
 const navigation = [
   { name: "Dashboard Overview", href: "/", icon: LayoutDashboard },
   {
-    name: "Payments",
-    href: "/payments",
+    name: "Business Management",
+    href: "/business-management",
     icon: CreditCard,
   },
   {
@@ -83,7 +83,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
       <div
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[320px] bg-[#292D73] z-50 flex flex-col transition-transform duration-300",
+          "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[350px] bg-[#292D73] z-50 flex flex-col transition-transform duration-300",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >

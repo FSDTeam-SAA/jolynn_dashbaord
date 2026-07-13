@@ -79,6 +79,10 @@ export const pageConfig: Record<
     title: "Job Post Management",
     description: "Manage customer job posts and requirements",
   },
+  "/report-management": {
+    title: "Report Management",
+    description: "Review and manage submitted reports",
+  },
    "/countries": {
     title: "Countries",
     description: "Welcome back! Here's what's happening in valoura travel today.",

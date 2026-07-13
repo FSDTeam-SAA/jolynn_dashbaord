@@ -67,36 +67,6 @@ const navigation = [
     href: "/visa-types",
     icon: StickyNote,
   },
-  {
-    name: "Universities ",
-    href: "/universities",
-    icon: HousePlus,
-  },
-  {
-    name: "Programs",
-    href: "/programs",
-    icon: ClipboardPenLine,
-  },
-  {
-    name: "Tour Packages",
-    href: "/tour-packages",
-    icon: Binoculars,
-  },
-  {
-    name: "Blog Management",
-    href: "/blog-management",
-    icon: FolderRoot,
-  },
-  {
-    name: "Newsletter",
-    href: "/newsletter",
-    icon: Newspaper,
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
 ];
 
 interface SidebarProps {
@@ -133,11 +103,12 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         {/* Logo */}
         <div className="h-[80px] flex items-center justify-center">
           <Image
-            src="/images/logo.png"
+            src="/images/logo_images.png"
             alt="Logo"
-            width={150}
-            height={120}
+            width={64}
+            height={64}
             priority
+            className="object-contain"
           />
         </div>
 

@@ -7,6 +7,7 @@ import {
   CalendarRange,
   CreditCard,
   GraduationCap,
+  Handshake,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -30,6 +31,11 @@ const navigation = [
     name: "Service Management",
     href: "/service-management",
     icon: Wrench,
+  },
+  {
+    name: "Sponsor Management",
+    href: "/sponsor-management",
+    icon: Handshake,
   },
   {
     name: "Student Applications",

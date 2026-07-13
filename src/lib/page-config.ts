@@ -59,6 +59,14 @@ export const pageConfig: Record<
     title: "Service Management",
     description: "Manage service providers and availability",
   },
+  "/sponsor-management": {
+    title: "Sponsor Management",
+    description: "Manage sponsors and sponsor content",
+  },
+  "/sponsor-management/add": {
+    title: "Add Sponsor",
+    description: "Create a new sponsor",
+  },
    "/countries": {
     title: "Countries",
     description: "Welcome back! Here's what's happening in valoura travel today.",
@@ -133,6 +141,13 @@ export const pageConfig: Record<
 
 export const getPageConfig = (pathname: string) => {
   // Dynamic Routes
+  if (pathname.startsWith("/sponsor-management/edit/")) {
+    return {
+      title: "Edit Sponsor",
+      description: "Update sponsor details and content",
+    };
+  }
+
   if (pathname.startsWith("/visa-applications/edit-visa/")) {
     return {
       title: "Edit Visa Application",

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   CalendarRange,
+  CircleHelp,
   CreditCard,
   GraduationCap,
   Handshake,
@@ -38,8 +39,13 @@ const navigation = [
     icon: Handshake,
   },
   {
-    name: "Student Applications",
-    href: "/student-applications",
+    name: "FAQ Management",
+    href: "/faq-management",
+    icon: CircleHelp,
+  },
+  {
+    name: "Job Management",
+    href: "/job-management",
     icon: GraduationCap,
   },
   {

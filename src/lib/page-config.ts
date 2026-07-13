@@ -67,6 +67,14 @@ export const pageConfig: Record<
     title: "Add Sponsor",
     description: "Create a new sponsor",
   },
+  "/faq-management": {
+    title: "FAQ Management",
+    description: "Manage frequently asked questions",
+  },
+  "/faq-management/add": {
+    title: "Add FAQ",
+    description: "Create a new frequently asked question",
+  },
    "/countries": {
     title: "Countries",
     description: "Welcome back! Here's what's happening in valoura travel today.",
@@ -141,6 +149,13 @@ export const pageConfig: Record<
 
 export const getPageConfig = (pathname: string) => {
   // Dynamic Routes
+  if (pathname.startsWith("/faq-management/edit/")) {
+    return {
+      title: "Edit FAQ",
+      description: "Update FAQ question and answer",
+    };
+  }
+
   if (pathname.startsWith("/sponsor-management/edit/")) {
     return {
       title: "Edit Sponsor",

@@ -47,7 +47,7 @@ function VerifyEmailForm() {
               <span>00:59</span>
             </div>
             <p className="text-[#14151C]">
-              Didn't get a code?{" "}
+              Didn&apos;t get a code?{" "}
               <a href="#" className="text-[#4365D0] font-semibold underline hover:text-[#168CF8]">
                 Resend
               </a>

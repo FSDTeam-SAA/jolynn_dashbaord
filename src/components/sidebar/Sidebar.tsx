@@ -4,20 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Binoculars,
   CalendarRange,
-  ClipboardPenLine,
   CreditCard,
-  FolderRoot,
   GraduationCap,
-  HousePlus,
   LayoutDashboard,
   LogOut,
   MapPin,
   MapPinned,
-  Newspaper,
   Plane,
-  Settings,
   StickyNote,
   UserRound,
   X,
@@ -89,7 +83,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
       <div
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[320px] bg-[#FAF6EE] z-50 flex flex-col transition-transform duration-300",
+          "fixed lg:sticky top-0 left-0 h-screen w-[280px] lg:w-[320px] bg-[#292D73] z-50 flex flex-col transition-transform duration-300",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
@@ -125,18 +119,13 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-[8px] px-4 py-[8px] text-sm font-medium transition-all duration-200",
+                  "group flex w-full items-center gap-3 rounded px-4 py-[8px] text-sm font-medium transition-colors duration-200",
                   isActive
-                    ? "bg-[#CD9B46] text-white"
-                    : "text-[#616161] hover:bg-slate-200",
+                    ? "bg-white text-[#292D73]"
+                    : "text-white hover:bg-white hover:text-[#292D73]",
                 )}
               >
-                <item.icon
-                  className={cn(
-                    "h-5 w-5",
-                    isActive ? "text-white" : "text-[#616161]",
-                  )}
-                />
+                <item.icon className="h-5 w-5" />
 
                 <span
                   className={cn("text-base", isActive ? "font-semibold" : "")}

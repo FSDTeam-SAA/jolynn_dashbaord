@@ -75,6 +75,10 @@ export const pageConfig: Record<
     title: "Add FAQ",
     description: "Create a new frequently asked question",
   },
+  "/job-management": {
+    title: "Job Post Management",
+    description: "Manage customer job posts and requirements",
+  },
    "/countries": {
     title: "Countries",
     description: "Welcome back! Here's what's happening in valoura travel today.",

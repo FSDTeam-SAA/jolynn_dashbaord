@@ -8,18 +8,18 @@ import ProfileSummaryCard from "./ProfileSummaryCard";
 
 export interface SettingsProfile {
   _id: string;
-  name: string;
+  firstName: string;
+  lastName?: string;
   email: string;
+  username?: string;
   gender: string;
-  phone?: string;
-  profileImage: string;
+  phoneNumber?: string;
+  profilePicture?: string;
   createdAt?: string;
-  address?: {
-    country?: string;
-    cityState?: string;
-    roadArea?: string;
-    postalCode?: string;
-  };
+  address?: string;
+  country?: string;
+  state?: string;
+  postcode?: string;
 }
 
 interface ProfileResponse {
@@ -55,7 +55,7 @@ export default function PersonalInfo() {
     queryKey: ["user-profile"],
     enabled: Boolean(accessToken),
     queryFn: async () => {
-      const response = await fetch(`${getApiBaseUrl()}/user/me`, {
+      const response = await fetch(`${getApiBaseUrl()}/user/profile`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = (await response
@@ -73,16 +73,15 @@ export default function PersonalInfo() {
   });
 
   const populateForm = (user: SettingsProfile) => {
-    const [first = "", ...rest] = (user.name || "").trim().split(/\s+/);
-    setFirstName(first);
-    setLastName(rest.join(" "));
+    setFirstName(user.firstName || "");
+    setLastName(user.lastName || "");
     setEmail(user.email || "");
-    setPhone(user.phone || "");
+    setPhone(user.phoneNumber || "");
     setGender(user.gender || "male");
-    setStreetAddress(user.address?.roadArea || "");
-    setLocation(user.address?.cityState || user.address?.country || "");
-    setPostalCode(user.address?.postalCode || "");
-    setProfileImagePreview(user.profileImage || "");
+    setStreetAddress(user.address || "");
+    setLocation(user.state || user.country || "");
+    setPostalCode(user.postcode || "");
+    setProfileImagePreview(user.profilePicture || "");
   };
 
   useEffect(() => {
@@ -94,22 +93,28 @@ export default function PersonalInfo() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${getApiBaseUrl()}/user/me`, {
+      const formData = new FormData();
+      formData.append("firstName", firstName.trim());
+      formData.append("lastName", lastName.trim());
+      formData.append("gender", gender);
+      formData.append("phoneNumber", phone.trim());
+      formData.append("address", streetAddress.trim());
+      formData.append("state", location.trim());
+      formData.append("postcode", postalCode.trim());
+      if (profileImageFile) {
+        formData.append(
+          "profilePicture",
+          profileImageFile,
+          profileImageFile.name,
+        );
+      }
+
+      const response = await fetch(`${getApiBaseUrl()}/user/profile`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-          gender,
-          phone: phone.trim(),
-          address: {
-            roadArea: streetAddress.trim(),
-            cityState: location.trim(),
-            postalCode: postalCode.trim(),
-          },
-        }),
+        body: formData,
       });
       const profileData = (await response
         .json()
@@ -120,29 +125,7 @@ export default function PersonalInfo() {
         profileData?.status === false
       )
         throw new Error(profileData?.message || "Unable to update profile.");
-      if (!profileImageFile) return profileData;
-      const formData = new FormData();
-      formData.append("profileImage", profileImageFile, profileImageFile.name);
-      const avatarResponse = await fetch(
-        `${getApiBaseUrl()}/user/upload-avatar`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${accessToken}` },
-          body: formData,
-        },
-      );
-      const avatarData = (await avatarResponse
-        .json()
-        .catch(() => null)) as ProfileResponse | null;
-      if (
-        !avatarResponse.ok ||
-        avatarData?.success === false ||
-        avatarData?.status === false
-      )
-        throw new Error(
-          avatarData?.message || "Unable to update profile image.",
-        );
-      return avatarData || profileData;
+      return profileData;
     },
     onSuccess: async (data) => {
       toast.success(data?.message || "Profile updated successfully.");
@@ -170,7 +153,10 @@ export default function PersonalInfo() {
     updateProfileMutation.mutate();
   };
   const user = profileQuery.data;
-  const fullName = `${firstName} ${lastName}`.trim() || user?.name || "User";
+  const fullName =
+    `${firstName} ${lastName}`.trim() ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    "User";
   const disabled = profileQuery.isLoading || updateProfileMutation.isPending;
   const inputClass =
     "h-11 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none transition-colors focus:border-[#CD9B46] focus:ring-2 focus:ring-[#CD9B46]/15 disabled:bg-gray-50 disabled:text-gray-400";

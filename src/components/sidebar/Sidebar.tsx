@@ -21,6 +21,7 @@ import {
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import LogoutModal from "@/components/logoutModal/LogoutModal";
 
 const navigation = [
   { name: "Dashboard Overview", href: "/", icon: LayoutDashboard },
@@ -70,6 +71,8 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const name = session?.user?.name || "Admin User";
@@ -96,6 +99,15 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await signOut({ callbackUrl: "/signin" });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -183,7 +195,10 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
               </Link>
               <button
                 type="button"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => {
+                  setIsProfileMenuOpen(false);
+                  setIsLogoutModalOpen(true);
+                }}
                 className="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
               >
                 <LogOut className="h-4 w-4" />
@@ -219,6 +234,13 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
           </button>
         </div>
       </div>
+
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        isLoggingOut={isLoggingOut}
+      />
     </>
   );
 }

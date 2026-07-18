@@ -1,25 +1,55 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import RichTextEditor from "@/app/(dashboard)/sponsor-management/_components/RichTextEditor";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import type { Faq } from "./FAQList";
 
 interface EditFaqProps {
-  faqId: number;
+  faqId: string;
 }
 
 export default function EditFaq({ faqId }: EditFaqProps) {
   const router = useRouter();
-  const [question, setQuestion] = useState("Can I register my business here?");
-  const [answer, setAnswer] = useState("<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const { data: session } = useSession();
+  const accessToken = (session?.user as { accessToken?: string } | undefined)?.accessToken;
+
+  const { data: response } = useQuery<{ success: boolean; message: string; data: Faq }>({
+    queryKey: ["faq", faqId],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/faq/${faqId}`);
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to fetch FAQ");
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (response?.data) { setQuestion(response.data.question); setAnswer(response.data.answer); }
+  }, [response]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (body: { question: string; answer: string }) => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/faq/${faqId}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to update FAQ");
+      return data;
+    },
+    onSuccess: (data) => { toast.success(data?.message || "FAQ updated successfully"); router.push("/faq-management"); },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!question.trim() || !answer.trim()) return;
-    // Submit { id: faqId, question, answer } to the update-FAQ API here.
-    router.push("/faq-management");
+    if (!question.trim() || !answer.trim()) return toast.error("Question and answer are required");
+    updateMutation.mutate({ question: question.trim(), answer });
   };
 
   return (
@@ -39,7 +69,7 @@ export default function EditFaq({ faqId }: EditFaqProps) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => router.push("/faq-management")} className="h-11 rounded-md bg-gray-200 text-sm font-semibold text-[#2b3674] hover:bg-gray-300">Cancel</button>
-          <button type="submit" className="h-11 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f]">Save FAQ</button>
+          <button type="submit" disabled={updateMutation.isPending} className="h-11 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f] disabled:opacity-60">{updateMutation.isPending ? "Saving..." : "Save FAQ"}</button>
         </div>
       </form>
     </div>

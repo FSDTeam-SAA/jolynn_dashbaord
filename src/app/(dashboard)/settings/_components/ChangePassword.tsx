@@ -33,7 +33,7 @@ function ChangePassword() {
     queryKey: ["user-profile"],
     enabled: Boolean(accessToken),
     queryFn: async () => {
-      const response = await fetch(`${getApiBaseUrl()}/user/me`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const response = await fetch(`${getApiBaseUrl()}/user/profile`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = (await response.json().catch(() => null)) as ProfileResponse | null;
       if (!response.ok || !data?.data) throw new Error("Unable to load profile.");
       return data.data;
@@ -81,28 +81,8 @@ function ChangePassword() {
   const checks = useMemo(
     () => [
       {
-        text: "Minimum 8–12 characters (recommend 12+ for stronger security).",
-        valid: newPassword.length >= 8,
-      },
-      {
-        text: "At least one uppercase letter must.",
-        valid: /[A-Z]/.test(newPassword),
-      },
-      {
-        text: "At least one lowercase letter must.",
-        valid: /[a-z]/.test(newPassword),
-      },
-      {
-        text: "At least one number must (0–9).",
-        valid: /\d/.test(newPassword),
-      },
-      {
-        text: "At least special character (! @ # $ % ^ & * etc.).",
-        valid: /[^A-Za-z0-9\s]/.test(newPassword),
-      },
-      {
-        text: "No spaces allowed.",
-        valid: newPassword.length > 0 && !/\s/.test(newPassword),
+        text: "Password must be at least 6 characters.",
+        valid: newPassword.length >= 6,
       },
     ],
     [newPassword],
@@ -130,12 +110,16 @@ function ChangePassword() {
   return (
     <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
       <ProfileSummaryCard
-        name={profile?.name || session?.user?.name || "User"}
+        name={
+          [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+          session?.user?.name ||
+          "User"
+        }
         email={profile?.email || session?.user?.email || "N/A"}
-        phone={profile?.phone}
-        location={profile?.address?.cityState || profile?.address?.country}
+        phone={profile?.phoneNumber}
+        location={profile?.state || profile?.country}
         since={profile?.createdAt}
-        image={profile?.profileImage}
+        image={profile?.profilePicture}
       />
       <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-2xl font-bold text-[#292D73]">Change Password</h2>

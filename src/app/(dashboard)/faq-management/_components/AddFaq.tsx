@@ -5,17 +5,32 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import RichTextEditor from "@/app/(dashboard)/sponsor-management/_components/RichTextEditor";
+import { useMutation } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function AddFaq() {
   const router = useRouter();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const { data: session } = useSession();
+  const accessToken = (session?.user as { accessToken?: string } | undefined)?.accessToken;
+
+  const createMutation = useMutation({
+    mutationFn: async (body: { question: string; answer: string }) => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/faq`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to add FAQ");
+      return data;
+    },
+    onSuccess: (data) => { toast.success(data?.message || "FAQ added successfully"); router.push("/faq-management"); },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!question.trim() || !answer.trim()) return;
-    // Submit { question, answer } to the create-FAQ API here.
-    router.push("/faq-management");
+    if (!question.trim() || !answer.trim()) return toast.error("Question and answer are required");
+    createMutation.mutate({ question: question.trim(), answer });
   };
 
   return (
@@ -33,7 +48,7 @@ export default function AddFaq() {
           <label className="text-sm font-medium text-gray-700">Answer</label>
           <RichTextEditor value={answer} onChange={setAnswer} placeholder="Write the FAQ answer..." />
         </div>
-        <button type="submit" className="h-11 w-full rounded-md bg-[#2b3674] text-sm font-semibold text-white transition-colors hover:bg-[#20285f]">Add FAQ</button>
+        <button type="submit" disabled={createMutation.isPending} className="h-11 w-full rounded-md bg-[#2b3674] text-sm font-semibold text-white transition-colors hover:bg-[#20285f] disabled:opacity-60">{createMutation.isPending ? "Adding..." : "Add FAQ"}</button>
       </form>
     </div>
   );

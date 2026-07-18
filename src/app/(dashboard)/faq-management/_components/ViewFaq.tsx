@@ -8,16 +8,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import type { Faq } from "./FAQList";
 
 interface ViewFaqProps {
   isOpen: boolean;
   onClose: () => void;
-  faqId: number;
-  faq: { question: string; answer: string };
+  faqId: string;
 }
 
-export default function ViewFaq({ isOpen, onClose, faqId, faq }: ViewFaqProps) {
-  // Use faqId here when connecting the single-FAQ API query.
+export default function ViewFaq({ isOpen, onClose, faqId }: ViewFaqProps) {
+  const { data: response, isPending } = useQuery<{ success: boolean; message: string; data: Faq }>({
+    queryKey: ["faq", faqId],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/faq/${faqId}`);
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to fetch FAQ");
+      return data;
+    },
+    enabled: isOpen,
+  });
+  const faq = response?.data;
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -39,7 +50,8 @@ export default function ViewFaq({ isOpen, onClose, faqId, faq }: ViewFaqProps) {
             <X className="h-4 w-4" />
           </button>
         </DialogHeader>
-        <div className="space-y-6">
+        {isPending && <div className="py-8 text-center text-sm text-gray-500">Loading FAQ details...</div>}
+        {faq && <div className="space-y-6">
           <div className="space-y-1.5">
             <h3 className="text-sm font-semibold text-gray-700">Question</h3>
             <p className="text-sm text-gray-500">{faq.question}</p>
@@ -51,7 +63,7 @@ export default function ViewFaq({ isOpen, onClose, faqId, faq }: ViewFaqProps) {
               dangerouslySetInnerHTML={{ __html: faq.answer }}
             />
           </div>
-        </div>
+        </div>}
       </DialogContent>
     </Dialog>
   );

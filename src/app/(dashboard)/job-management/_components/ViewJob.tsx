@@ -9,16 +9,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { JobPost } from "./JobList";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
 interface ViewJobProps {
   isOpen: boolean;
   onClose: () => void;
-  jobId: number;
-  job: JobPost;
+  jobId: string;
 }
 
-export default function ViewJob({ isOpen, onClose, jobId, job }: ViewJobProps) {
-  // Use jobId here when connecting the single-job API query.
+export default function ViewJob({ isOpen, onClose, jobId }: ViewJobProps) {
+  const { data: session } = useSession();
+  const accessToken = (session?.user as { accessToken?: string } | undefined)?.accessToken;
+  const { data: response, isPending } = useQuery<{ success: boolean; message: string; data: JobPost }>({
+    queryKey: ["helpWantedJob", jobId, accessToken],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/help-wanted/${jobId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to fetch job details");
+      return data;
+    },
+    enabled: isOpen && Boolean(accessToken),
+  });
+  const job = response?.data;
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -40,11 +53,12 @@ export default function ViewJob({ isOpen, onClose, jobId, job }: ViewJobProps) {
             <X className="h-4 w-4" />
           </button>
         </DialogHeader>
-        <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+        {isPending && <div className="py-8 text-center text-sm text-gray-500">Loading job details...</div>}
+        {job && <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
           <Detail label="Username" value={job.username} />
-          <Detail label="Contact" value={job.contact} />
+          <Detail label="Contact" value={job.phone} />
           <Detail label="Email" value={job.email} />
-          <Detail label="Zip Code" value={job.zipCode} />
+          <Detail label="Zip Code" value={job.zipcode} />
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-semibold text-gray-700">
               Category
@@ -58,10 +72,10 @@ export default function ViewJob({ isOpen, onClose, jobId, job }: ViewJobProps) {
           <div className="space-y-1.5 sm:col-span-2">
             <h3 className="text-sm font-semibold text-gray-700">Requirement</h3>
             <p className="whitespace-pre-line text-sm leading-6 text-gray-500">
-              {job.requirement}
+              {job.message}
             </p>
           </div>
-        </div>
+        </div>}
       </DialogContent>
     </Dialog>
   );

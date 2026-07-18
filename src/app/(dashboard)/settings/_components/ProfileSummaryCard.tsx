@@ -24,8 +24,8 @@ export default function ProfileSummaryCard({ name = "User", email = "N/A", phone
     : "N/A";
 
   return (
-    <aside className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm lg:min-h-[430px]">
-      <div className="flex flex-col items-center text-center">
+    <aside className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-sm lg:min-h-[430px]">
+      <div className="min-w-0 flex flex-col items-center text-center">
         <div className="relative">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -41,10 +41,14 @@ export default function ProfileSummaryCard({ name = "User", email = "N/A", phone
             </label>
           )}
         </div>
-        <h2 className="mt-4 text-xl font-bold text-[#292D73]">{name}</h2>
-        <p className="text-xs text-gray-500">{email}</p>
+        <h2 className="mt-4 max-w-full break-words text-xl font-bold text-[#292D73]">
+          {name}
+        </h2>
+        <p className="max-w-full break-all text-xs leading-5 text-gray-500">
+          {email}
+        </p>
       </div>
-      <dl className="mt-7 space-y-4 text-sm">
+      <dl className="mt-7 min-w-0 space-y-4 text-sm">
         <Summary label="Name" value={name} />
         <Summary label="Email" value={email} />
         <Summary label="Phone" value={phone || "N/A"} />
@@ -56,5 +60,10 @@ export default function ProfileSummaryCard({ name = "User", email = "N/A", phone
 }
 
 function Summary({ label, value }: { label: string; value: string }) {
-  return <div className="flex gap-1 text-gray-500"><dt className="font-semibold text-gray-700">{label}:</dt><dd>{value}</dd></div>;
+  return (
+    <div className="grid min-w-0 grid-cols-[70px_minmax(0,1fr)] gap-1 text-gray-500">
+      <dt className="font-semibold text-gray-700">{label}:</dt>
+      <dd className="min-w-0 break-words [overflow-wrap:anywhere]">{value}</dd>
+    </div>
+  );
 }

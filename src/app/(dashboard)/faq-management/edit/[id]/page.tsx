@@ -7,5 +7,5 @@ interface EditFaqPageProps {
 
 export default async function EditFaqPage({ params }: EditFaqPageProps) {
   const { id } = await params;
-  return <EditFaq faqId={Number(id)} />;
+  return <EditFaq faqId={id} />;
 }

@@ -1,12 +1,18 @@
-import React from 'react'
-import VerifyEmailForm from './_components/VerifyEmailForm'
+import React from "react";
+import VerifyEmailForm from "./_components/VerifyEmailForm";
 
-function page() {
+async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ email?: string }>;
+}) {
+  const { email = "" } = await searchParams;
+
   return (
     <div>
-      <VerifyEmailForm />
+      <VerifyEmailForm email={email} />
     </div>
-  )
+  );
 }
 
-export default page
+export default Page;

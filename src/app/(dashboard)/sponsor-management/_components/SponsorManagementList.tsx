@@ -12,122 +12,105 @@ import {
 } from "@/components/ui/select";
 import Pagination from "@/components/pagination/Pagination";
 import ViewSponsor from "./ViewSponsor";
+import DeleteModal from "@/components/deleteModal/DeleteModal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
-interface Sponsor {
-  id: number;
+export type Sponsor = {
+  _id: string;
   title: string;
   content: string;
-  image: string;
-  status: "Active" | "Inactive";
-}
+  image?: string;
+  imagePublicId?: string;
+  status?: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+};
 
-const description =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-const initialSponsors: Sponsor[] = [
-  {
-    id: 1,
-    title: "Anderson Electric Co.",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 2,
-    title: "Rivera Plumbing & Drain",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Inactive",
-  },
-  {
-    id: 3,
-    title: "Sunrise Roofing Inc.",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Inactive",
-  },
-  {
-    id: 4,
-    title: "Precision Painters LLC",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 5,
-    title: "Bright Spark Services",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 6,
-    title: "Rapid Rooter Co.",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Inactive",
-  },
-  {
-    id: 7,
-    title: "Elite Roof Solutions",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 8,
-    title: "Prime Home Repairs",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 9,
-    title: "Metro Electric Works",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Inactive",
-  },
-  {
-    id: 10,
-    title: "Clear Flow Plumbing",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 11,
-    title: "Skyline Roofing Group",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Active",
-  },
-  {
-    id: 12,
-    title: "Reliable Handyman LLC",
-    content: `<p>${description}</p>`,
-    image: "",
-    status: "Inactive",
-  },
-];
+type SponsorResponse = {
+  success: boolean;
+  message: string;
+  meta: { page: number; limit: number; total: number };
+  data: Sponsor[];
+};
 
 export default function SponsorManagementList() {
-  const [sponsors, setSponsors] = useState(initialSponsors);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [viewSponsorId, setViewSponsorId] = useState<number | null>(null);
-  const limit = 5;
+  const [viewSponsorId, setViewSponsorId] = useState<string | null>(null);
+  const [sponsorToDelete, setSponsorToDelete] = useState<Sponsor | null>(null);
+  const limit = 10;
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const accessToken = (session?.user as { accessToken?: string } | undefined)
+    ?.accessToken;
 
-  const filteredSponsors = sponsors.filter(
-    (sponsor) =>
-      statusFilter === "all" || sponsor.status.toLowerCase() === statusFilter,
-  );
-  const paginatedSponsors = filteredSponsors.slice(
-    (page - 1) * limit,
-    page * limit,
-  );
-  const selectedViewSponsor = sponsors.find(
-    (sponsor) => sponsor.id === viewSponsorId,
-  );
+  const { data: response } = useQuery<SponsorResponse>({
+    queryKey: ["sponsors", page, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        page: String(page),
+      });
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor?${params}`,
+      );
+      const data = await res.json();
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Failed to fetch sponsors");
+      return data;
+    },
+  });
+  const sponsors = response?.data ?? [];
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const body = new FormData();
+      body.append("status", status);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor/${id}`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body,
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Failed to update status");
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Status updated");
+      queryClient.invalidateQueries({ queryKey: ["sponsors"] });
+      queryClient.invalidateQueries({ queryKey: ["sponsor"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Failed to delete sponsor");
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Sponsor deleted");
+      setSponsorToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["sponsors"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   useEffect(() => setPage(1), [statusFilter]);
 
@@ -140,7 +123,7 @@ export default function SponsorManagementList() {
               <SelectTrigger className="!h-10 !w-full rounded-[8px] border-gray-200 bg-white text-sm font-medium text-gray-600 shadow-sm focus:ring-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="rounded-lg border-gray-100 shadow-lg">
+              <SelectContent>
                 <SelectItem value="all">Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -149,12 +132,11 @@ export default function SponsorManagementList() {
           </div>
           <Link
             href="/sponsor-management/add"
-            className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#2b3674] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#20285f]"
+            className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#2b3674] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#20285f]"
           >
             <Plus className="h-4 w-4" /> Add Sponsor
           </Link>
         </div>
-
         <div className="w-full overflow-x-auto rounded-xl border border-gray-100">
           <table className="w-full min-w-[850px] border-collapse text-left">
             <thead>
@@ -168,81 +150,101 @@ export default function SponsorManagementList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white text-sm">
-              {paginatedSponsors.map((sponsor) => (
-                <tr
-                  key={sponsor.id}
-                  className="transition-colors hover:bg-slate-50/50"
-                >
-                  <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">
-                    {sponsor.title}
-                  </td>
-                  <td className="max-w-[500px] px-4 py-4 text-center text-gray-600">
-                    <div
-                      className="line-clamp-2"
-                      dangerouslySetInnerHTML={{ __html: sponsor.content }}
-                    />
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <span
-                      className={`inline-block min-w-[85px] rounded-full border px-3 py-1 text-xs font-semibold ${sponsor.status === "Active" ? "border-[#22c55e] bg-[#f0fdf4] text-[#22c55e]" : "border-[#ef4444] bg-[#fef2f2] text-[#ef4444]"}`}
-                    >
-                      {sponsor.status}
-                    </span>
-                  </td>
-                  <td className="py-4 pl-4 pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/sponsor-management/edit/${sponsor.id}`}
-                        aria-label={`Edit ${sponsor.title}`}
-                        className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:border-[#2b3674] hover:bg-[#eef2ff]"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setViewSponsorId(sponsor.id)}
-                        aria-label={`View ${sponsor.title}`}
-                        className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:border-[#2b3674] hover:bg-[#eef2ff]"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSponsors((current) =>
-                            current.filter((item) => item.id !== sponsor.id),
-                          )
+              {sponsors.map((sponsor) => {
+                const status = sponsor.status ?? "active";
+                return (
+                  <tr key={sponsor._id} className="hover:bg-slate-50/50">
+                    <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">
+                      {sponsor.title}
+                    </td>
+                    <td className="max-w-[500px] px-4 py-4 text-center text-gray-600">
+                      <div
+                        className="line-clamp-2"
+                        dangerouslySetInnerHTML={{ __html: sponsor.content }}
+                      />
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <Select
+                        value={status}
+                        disabled={statusMutation.isPending}
+                        onValueChange={(value) =>
+                          statusMutation.mutate({
+                            id: sponsor._id,
+                            status: value,
+                          })
                         }
-                        aria-label={`Delete ${sponsor.title}`}
-                        className="rounded-md border border-red-200 p-1.5 text-red-600 transition-colors hover:border-red-600 hover:bg-red-50"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                        <SelectTrigger className="mx-auto h-8 w-[105px] rounded-full text-xs font-semibold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="py-4 pl-4 pr-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/sponsor-management/edit/${sponsor._id}`}
+                          className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674]"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() => setViewSponsorId(sponsor._id)}
+                          className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674]"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setSponsorToDelete(sponsor)}
+                          className="rounded-md border border-red-200 p-1.5 text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!sponsors.length && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center text-sm text-gray-500"
+                  >
+                    No sponsors found
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
-
         <Pagination
           page={page}
           limit={limit}
-          total={filteredSponsors.length}
-          currentCount={paginatedSponsors.length}
+          total={response?.meta.total ?? 0}
+          currentCount={sponsors.length}
           onPageChange={setPage}
         />
       </div>
-
-      {selectedViewSponsor && (
+      {viewSponsorId && (
         <ViewSponsor
-          isOpen={viewSponsorId !== null}
+          isOpen
           onClose={() => setViewSponsorId(null)}
-          sponsorId={selectedViewSponsor.id}
-          sponsor={selectedViewSponsor}
+          sponsorId={viewSponsorId}
         />
       )}
+      <DeleteModal
+        isOpen={!!sponsorToDelete}
+        onClose={() => !deleteMutation.isPending && setSponsorToDelete(null)}
+        onConfirm={() =>
+          sponsorToDelete && deleteMutation.mutate(sponsorToDelete._id)
+        }
+        itemName={sponsorToDelete?.title || "this sponsor"}
+        isDeleting={deleteMutation.isPending}
+      />
     </>
   );
 }

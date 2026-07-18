@@ -8,21 +8,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CloseButton } from "./AddSponsor";
+import { useQuery } from "@tanstack/react-query";
+import type { Sponsor } from "./SponsorManagementList";
 
 interface ViewSponsorProps {
   isOpen: boolean;
   onClose: () => void;
-  sponsorId: number;
-  sponsor: { title: string; content: string; image: string; status: string };
+  sponsorId: string;
 }
 
 export default function ViewSponsor({
   isOpen,
   onClose,
   sponsorId,
-  sponsor,
 }: ViewSponsorProps) {
-  // Use sponsorId here when connecting the single-sponsor API query.
+  const { data: response, isPending } = useQuery<{ success: boolean; message: string; data: Sponsor }>({
+    queryKey: ["sponsor", sponsorId],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor/${sponsorId}`);
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to fetch sponsor");
+      return data;
+    },
+    enabled: isOpen,
+  });
+  const sponsor = response?.data;
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -37,7 +47,8 @@ export default function ViewSponsor({
           </DialogTitle>
           <CloseButton onClose={onClose} />
         </DialogHeader>
-        <div className="space-y-6">
+        {isPending && <div className="py-8 text-center text-sm text-gray-500">Loading sponsor details...</div>}
+        {sponsor && <div className="space-y-6">
           <div className="space-y-1.5">
             <h3 className="text-sm font-semibold text-gray-700">Title</h3>
             <p className="text-sm text-gray-500">{sponsor.title}</p>
@@ -59,7 +70,8 @@ export default function ViewSponsor({
               />
             </div>
           )}
-        </div>
+          <div className="space-y-1.5"><h3 className="text-sm font-semibold text-gray-700">Status</h3><p className="text-sm capitalize text-gray-500">{sponsor.status ?? "active"}</p></div>
+        </div>}
       </DialogContent>
     </Dialog>
   );

@@ -1,26 +1,61 @@
 "use client";
 
-import React, { ChangeEvent, FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import RichTextEditor from "./RichTextEditor";
 import { CloseButton, ImageUpload } from "./AddSponsor";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import type { Sponsor } from "./SponsorManagementList";
 
 interface EditSponsorProps {
-  sponsorId: number;
+  sponsorId: string;
 }
 
 export default function EditSponsor({ sponsorId }: EditSponsorProps) {
   const router = useRouter();
-  const [title, setTitle] = useState("Rivera Plumbing & Drain");
-  const [content, setContent] = useState(
-    "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>",
-  );
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [image, setImage] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const { data: session } = useSession();
+  const accessToken = (session?.user as { accessToken?: string } | undefined)?.accessToken;
+
+  const { data: response } = useQuery<{ success: boolean; data: Sponsor; message: string }>({
+    queryKey: ["sponsor", sponsorId],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor/${sponsorId}`);
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to fetch sponsor");
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (response?.data) {
+      setTitle(response.data.title);
+      setContent(response.data.content);
+      setImage(response.data.image || "");
+    }
+  }, [response]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (body: FormData) => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/sponsor/${sponsorId}`, { method: "PUT", headers: { Authorization: `Bearer ${accessToken}` }, body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to update sponsor");
+      return data;
+    },
+    onSuccess: (data) => { toast.success(data?.message || "Sponsor updated successfully"); router.push("/sponsor-management"); },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setImage(String(reader.result));
     reader.readAsDataURL(file);
@@ -28,9 +63,12 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || !content.trim()) return;
-    // Submit { id: sponsorId, title, content, image } to the update API here.
-    router.push("/sponsor-management");
+    if (!title.trim() || !content.trim()) return toast.error("Title and content are required");
+    const body = new FormData();
+    body.append("title", title.trim());
+    body.append("content", content);
+    if (imageFile) body.append("image", imageFile);
+    updateMutation.mutate(body);
   };
 
   return (
@@ -68,7 +106,7 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
         <ImageUpload
           image={image}
           onImage={handleImage}
-          onRemove={() => setImage("")}
+          onRemove={() => { setImage(""); setImageFile(null); }}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <button
@@ -80,9 +118,10 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
           </button>
           <button
             type="submit"
-            className="h-11 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f]"
+            disabled={updateMutation.isPending}
+            className="h-11 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f] disabled:opacity-60"
           >
-            Save Sponsor
+            {updateMutation.isPending ? "Saving..." : "Save Sponsor"}
           </button>
         </div>
       </form>

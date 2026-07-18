@@ -9,5 +9,5 @@ export default async function EditSponsorPage({
   params,
 }: EditSponsorPageProps) {
   const { id } = await params;
-  return <EditSponsor sponsorId={Number(id)} />;
+  return <EditSponsor sponsorId={id} />;
 }

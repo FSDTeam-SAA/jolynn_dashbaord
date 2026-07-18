@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 "use client";
 
 import React, { useState } from "react";
@@ -20,24 +19,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
-// Mock data
-const data = [
-  { name: "Jan", visits: 40 },
-  { name: "Feb", visits: 180 },
-  { name: "Mar", visits: 160 },
-  { name: "Apr", visits: 100 },
-  { name: "May", visits: 280 },
-  { name: "June", visits: 460 },
-  { name: "July", visits: 520 },
-  { name: "Aug", visits: 380 },
-  { name: "Sep", visits: 640 },
-  { name: "Oct", visits: 440 },
-  { name: "Nov", visits: 240 },
-  { name: "Dec", visits: 300 },
-];
+type MonthlyRegistrationResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: Array<{
+    month: string;
+    year: number;
+    count: number;
+  }>;
+};
 
-const CustomTooltip = ({ active, payload }: any) => {
+type TooltipProps = {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    payload: { name: string };
+  }>;
+};
+
+const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-xl flex flex-col gap-0.5 min-w-[120px]">
@@ -57,12 +61,45 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function WebsiteVisitsChart() {
+  const { data: session } = useSession();
+  const accessToken = (
+    session?.user as { accessToken?: string } | undefined
+  )?.accessToken;
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, index) =>
     (currentYear - index).toString(),
   );
 
   const [selectedYear, setSelectedYear] = useState<string>(years[0]);
+
+  const { data: registrationResponse } =
+    useQuery<MonthlyRegistrationResponse>({
+      queryKey: ["monthlyRegistrations", selectedYear, accessToken],
+      queryFn: async () => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/dashboard/monthly-registrations?year=${selectedYear}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data?.success) {
+          throw new Error(
+            data?.message || "Failed to fetch monthly registrations"
+          );
+        }
+
+        return data;
+      },
+      enabled: Boolean(accessToken),
+    });
+
+  const chartData =
+    registrationResponse?.data.map((item) => ({
+      name: item.month,
+      visits: item.count,
+    })) ?? [];
 
   return (
     <Card className="w-full bg-white rounded-xl border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 mt-10">
@@ -78,7 +115,7 @@ export default function WebsiteVisitsChart() {
         {/* Dynamic shadcn Select Dropdown */}
         <div className="w-[130px]">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-9 text-xs font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
+            <SelectTrigger className="h-9 w-full text-xs font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent className="rounded-lg border-gray-100 shadow-lg">
@@ -88,7 +125,7 @@ export default function WebsiteVisitsChart() {
                   value={year}
                   className="text-xs font-medium text-gray-600 focus:bg-slate-50 focus:text-[#1e266e] cursor-pointer"
                 >
-                  June, {year}
+                  {year}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -100,7 +137,7 @@ export default function WebsiteVisitsChart() {
       <CardContent className="p-0 h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={data}
+            data={chartData}
             margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
           >
             <defs>
@@ -128,8 +165,8 @@ export default function WebsiteVisitsChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#9ca3af", fontSize: 11, fontWeight: 500 }}
-              domain={[0, 750]}
-              ticks={[0, 250, 500, 750]}
+              domain={[0, "auto"]}
+              allowDecimals={false}
             />
 
             <Tooltip

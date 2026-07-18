@@ -8,40 +8,86 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
 interface ViewBusinessProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: number;
-  businessData?: {
-    name: string;
-    owner: string;
-    status: "Active" | "Pending" | "Rejected" | string;
-    category: string;
-  };
+  businessId: string;
 }
+
+type BusinessDetailsResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    username?: string;
+    role: string;
+    gender?: string;
+    phoneNumber?: string;
+    status: string;
+    tag?: string;
+    profilePicture?: string;
+    address?: string;
+    country?: string;
+    postcode?: string;
+    state?: string;
+    createdAt: string;
+  };
+};
 
 export default function ViewBusiness({
   isOpen,
   onClose,
   businessId,
-  businessData = {
-    name: "Anderson Electric Co.",
-    owner: "James Anderson",
-    status: "Active",
-    category: "Electricians",
-  },
 }: ViewBusinessProps) {
-  // Use businessId here when connecting the single-business API query.
+  const { data: session } = useSession();
+  const accessToken = (
+    session?.user as { accessToken?: string } | undefined
+  )?.accessToken;
+
+  const { data: businessResponse, isPending } =
+    useQuery<BusinessDetailsResponse>({
+      queryKey: ["businessUser", businessId, accessToken],
+      queryFn: async () => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${businessId}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Failed to fetch business details");
+        }
+
+        return data;
+      },
+      enabled: isOpen && Boolean(businessId) && Boolean(accessToken),
+    });
+
+  const businessData = businessResponse?.data;
+  const ownerName = businessData
+    ? [businessData.firstName, businessData.lastName].filter(Boolean).join(" ")
+    : "";
+  const formattedStatus = businessData?.status
+    ? businessData.status.charAt(0).toUpperCase() + businessData.status.slice(1)
+    : "";
 
   // Status Badge color helper
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Active":
+      case "active":
         return "border-[#22c55e] text-[#22c55e] bg-[#f0fdf4]";
-      case "Pending":
+      case "pending":
         return "border-[#f59e0b] text-[#f59e0b] bg-[#fffbeb]";
-      case "Rejected":
+      case "rejected":
         return "border-[#ef4444] text-[#ef4444] bg-[#fef2f2]";
       default:
         return "border-gray-200 text-gray-500 bg-gray-50";
@@ -60,7 +106,7 @@ export default function ViewBusiness({
         {/* Modal Header */}
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-5">
           <DialogTitle className="text-xl font-bold text-gray-800 tracking-tight">
-            {businessData.name}
+            {businessData?.username || ownerName || "Business Details"}
           </DialogTitle>
           <button
             type="button"
@@ -73,12 +119,19 @@ export default function ViewBusiness({
         </DialogHeader>
 
         {/* Modal Body / Information Grid */}
+        {isPending && (
+          <div className="py-8 text-center text-sm font-medium text-gray-500">
+            Loading business details...
+          </div>
+        )}
+
+        {businessData && (
         <div className="flex flex-col gap-6">
           {/* Owner Info Block */}
           <div className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-gray-700">Owner</span>
             <span className="text-sm font-medium text-gray-400">
-              {businessData.owner}
+              {ownerName || businessData.email}
             </span>
           </div>
 
@@ -91,9 +144,9 @@ export default function ViewBusiness({
               </span>
               <div>
                 <span
-                  className={`inline-block min-w-[85px] px-3 py-1 text-xs font-semibold rounded-full border text-center ${getStatusStyles(businessData.status)}`}
+                  className={`inline-block min-w-[85px] px-3 py-1 text-xs font-semibold rounded-full border text-center ${getStatusStyles(businessData.status.toLowerCase())}`}
                 >
-                  {businessData.status}
+                  {formattedStatus}
                 </span>
               </div>
             </div>
@@ -105,12 +158,59 @@ export default function ViewBusiness({
               </span>
               <div>
                 <span className="inline-block px-3 py-1 text-xs font-medium bg-[#eef2ff] text-[#3b4cb8] rounded-md">
-                  {businessData.category}
+                  {businessData.tag || businessData.role}
                 </span>
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">Email</span>
+              <span className="break-all text-sm font-medium text-gray-400">
+                {businessData.email}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">Phone</span>
+              <span className="text-sm font-medium text-gray-400">
+                {businessData.phoneNumber || "N/A"}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">Role</span>
+              <span className="text-sm font-medium text-gray-400">
+                {businessData.role}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
+                Gender
+              </span>
+              <span className="text-sm font-medium capitalize text-gray-400">
+                {businessData.gender || "N/A"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-gray-700">Address</span>
+            <span className="text-sm font-medium text-gray-400">
+              {[
+                businessData.address,
+                businessData.state,
+                businessData.postcode,
+                businessData.country,
+              ]
+                .filter(Boolean)
+                .join(", ") || "N/A"}
+            </span>
+          </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

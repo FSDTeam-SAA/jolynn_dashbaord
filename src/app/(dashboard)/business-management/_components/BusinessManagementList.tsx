@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useDeferredValue, useEffect, useState } from "react";
 import { Search, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,73 +12,147 @@ import {
 } from "@/components/ui/select";
 import Pagination from "@/components/pagination/Pagination";
 import ViewBusiness from "./ViewBusiness";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import DeleteModal from "@/components/deleteModal/DeleteModal";
+
+type BusinessUser = {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  username?: string;
+  role: string;
+  status: string;
+  tag?: string;
+};
+
+type BusinessListResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  meta: { page: number; limit: number; total: number };
+  data: BusinessUser[];
+};
 
 export default function BusinessManagementList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [page, setPage] = useState(1);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
     null,
   );
+  const [businessToDelete, setBusinessToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const limit = 10;
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const accessToken = (
+    session?.user as { accessToken?: string } | undefined
+  )?.accessToken;
 
-  // Mock Data matching your image precisely
-  const businesses = [
-    {
-      id: 1,
-      name: "Anderson Electric Co.",
-      category: "Electricians",
-      owner: "James Anderson",
-      status: "Active",
-      isLink: true,
-    },
-    {
-      id: 2,
-      name: "Rivera Plumbing & Drain",
-      category: "Plumbers",
-      owner: "Carlos Rivera",
-      status: "Pending",
-      isLink: true,
-    },
-    {
-      id: 3,
-      name: "Sunrise Roofing Inc.",
-      category: "Roofers",
-      owner: "Tommy Nguyen",
-      status: "Rejected",
-      isLink: true,
-    },
-    {
-      id: 4,
-      name: "Precision Painters LLC",
-      category: "Handymen",
-      owner: "Mike Kowalski",
-      status: "Active",
-      isLink: false,
-    },
-  ];
+  const { data: businessResponse } = useQuery<BusinessListResponse>({
+    queryKey: [
+      "businessUsers",
+      statusFilter,
+      deferredSearchQuery,
+      page,
+      accessToken,
+    ],
+    queryFn: async () => {
+      const queryParams = new URLSearchParams({
+        role: "businessOwner",
+        limit: limit.toString(),
+        page: page.toString(),
+      });
 
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+      if (statusFilter !== "all") queryParams.set("status", statusFilter);
+      if (deferredSearchQuery) {
+        queryParams.set("searchTerm", deferredSearchQuery);
+      }
 
-  const filteredBusinesses = businesses.filter((business) => {
-    const matchesSearch =
-      !normalizedQuery ||
-      business.name.toLowerCase().includes(normalizedQuery) ||
-      business.owner.toLowerCase().includes(normalizedQuery);
-    const matchesStatus =
-      statusFilter === "all" || business.status.toLowerCase() === statusFilter;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user?${queryParams.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const data = await response.json();
 
-    return matchesSearch && matchesStatus;
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to fetch businesses");
+      }
+
+      return data;
+    },
+    enabled: Boolean(accessToken),
   });
 
-  const paginatedBusinesses = filteredBusinesses.slice(
-    (page - 1) * limit,
-    page * limit,
-  );
+  const businesses = businessResponse?.data ?? [];
+  const totalBusinesses = businessResponse?.meta.total ?? 0;
 
-  const selectedBusiness = businesses.find(
-    (business) => business.id === selectedBusinessId,
-  );
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.success) {
+        const errorMessage = Array.isArray(data?.message)
+          ? data.message[0]
+          : data?.message;
+        throw new Error(errorMessage || "Failed to update status");
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Status updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["businessUser"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update status");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to delete business");
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Business deleted successfully");
+      setBusinessToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   useEffect(() => {
     setPage(1);
@@ -87,11 +161,11 @@ export default function BusinessManagementList() {
   // Status Badge color mapping
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Active":
+      case "active":
         return "border-[#22c55e] text-[#22c55e] bg-[#f0fdf4]";
-      case "Pending":
+      case "pending":
         return "border-[#f59e0b] text-[#f59e0b] bg-[#fffbeb]";
-      case "Rejected":
+      case "rejected":
         return "border-[#ef4444] text-[#ef4444] bg-[#fef2f2]";
       default:
         return "border-gray-200 text-gray-500 bg-gray-50";
@@ -167,56 +241,98 @@ export default function BusinessManagementList() {
 
           {/* Table Body rows */}
           <tbody className="divide-y divide-gray-100 bg-white text-sm">
-            {paginatedBusinesses.map((row) => (
+            {businesses.map((row) => (
               <tr
-                key={row.id}
+                key={row._id}
                 className="hover:bg-slate-50/50 transition-colors"
               >
                 {/* Business Name Column */}
                 <td className="py-4 pl-6 pr-4 font-semibold">
-                  {row.isLink ? (
-                    <span className="text-[#3b4cb8] cursor-pointer hover:underline">
-                      {row.name}
-                    </span>
-                  ) : (
-                    <span className="text-gray-800">{row.name}</span>
-                  )}
+                  <span className="text-[#3b4cb8] cursor-pointer hover:underline">
+                    {row.username ||
+                      [row.firstName, row.lastName].filter(Boolean).join(" ") ||
+                      row.email}
+                  </span>
                 </td>
 
                 {/* Category Badge Column */}
                 <td className="py-4 px-4 text-center">
                   <span className="px-2.5 py-1 text-xs font-medium bg-[#eef2ff] text-[#3b4cb8] rounded-md">
-                    {row.category}
+                    {row.tag || row.role}
                   </span>
                 </td>
 
                 {/* Owner Column */}
                 <td className="py-4 px-4 text-center text-gray-700 font-medium">
-                  {row.owner}
+                  {[row.firstName, row.lastName].filter(Boolean).join(" ") ||
+                    row.email}
                 </td>
 
                 {/* Status Column */}
                 <td className="py-4 px-4 text-center">
                   <span
-                    className={`inline-block min-w-[85px] px-3 py-1 text-xs font-semibold rounded-full border text-center ${getStatusStyles(row.status)}`}
+                    className={`inline-block min-w-[85px] px-3 py-1 text-xs font-semibold rounded-full border text-center ${getStatusStyles(row.status.toLowerCase())}`}
                   >
-                    {row.status}
+                    {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
                   </span>
                 </td>
 
                 {/* Action Buttons Column */}
                 <td className="py-4 pl-4 pr-6">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="h-7 cursor-pointer px-3 text-xs font-semibold text-white bg-[#22c55e] hover:bg-green-600 rounded-md transition-colors shadow-sm">
-                      Approve
-                    </button>
-                    <button className="h-7 cursor-pointer px-3 text-xs font-semibold text-white bg-[#dc2626] hover:bg-red-600 rounded-md transition-colors shadow-sm">
-                      Reject
+                    {row.status.toLowerCase() !== "active" && (
+                      <button
+                        type="button"
+                        disabled={updateStatusMutation.isPending}
+                        onClick={() =>
+                          updateStatusMutation.mutate({
+                            id: row._id,
+                            status: "active",
+                          })
+                        }
+                        className="h-7 cursor-pointer px-3 text-xs font-semibold text-white bg-[#22c55e] hover:bg-green-600 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {row.status.toLowerCase() === "rejected"
+                          ? "Activate"
+                          : "Approve"}
+                      </button>
+                    )}
+                    {row.status.toLowerCase() !== "rejected" && (
+                      <button
+                        type="button"
+                        disabled={updateStatusMutation.isPending}
+                        onClick={() =>
+                          updateStatusMutation.mutate({
+                            id: row._id,
+                            status: "rejected",
+                          })
+                        }
+                        className="h-7 cursor-pointer px-3 text-xs font-semibold text-white bg-[#dc2626] hover:bg-red-600 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Reject
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setBusinessToDelete({
+                          id: row._id,
+                          name:
+                            row.username ||
+                            [row.firstName, row.lastName]
+                              .filter(Boolean)
+                              .join(" ") ||
+                            row.email,
+                        })
+                      }
+                      className="h-7 cursor-pointer rounded-md bg-[#dc2626] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-600"
+                    >
+                      Delete
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSelectedBusinessId(row.id)}
-                      aria-label={`View ${row.name}`}
+                      onClick={() => setSelectedBusinessId(row._id)}
+                      aria-label={`View ${row.username || row.email}`}
                       className="ml-1 cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] shadow-sm transition-colors hover:border-[#2b3674] hover:bg-[#eef2ff]"
                     >
                       <Eye className="w-4 h-4 stroke-[2]" />
@@ -225,6 +341,16 @@ export default function BusinessManagementList() {
                 </td>
               </tr>
             ))}
+            {businesses.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="py-8 text-center text-sm font-medium text-gray-500"
+                >
+                  No businesses found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -233,20 +359,29 @@ export default function BusinessManagementList() {
       <Pagination
         page={page}
         limit={limit}
-        total={filteredBusinesses.length}
-        currentCount={paginatedBusinesses.length}
+        total={totalBusinesses}
+        currentCount={businesses.length}
         onPageChange={setPage}
       />
       </div>
 
-      {selectedBusiness && (
+      {selectedBusinessId && (
         <ViewBusiness
-          isOpen={selectedBusinessId !== null}
+          isOpen
           onClose={() => setSelectedBusinessId(null)}
-          businessId={selectedBusiness.id}
-          businessData={selectedBusiness}
+          businessId={selectedBusinessId}
         />
       )}
+
+      <DeleteModal
+        isOpen={businessToDelete !== null}
+        onClose={() => !deleteMutation.isPending && setBusinessToDelete(null)}
+        onConfirm={() =>
+          businessToDelete && deleteMutation.mutate(businessToDelete.id)
+        }
+        itemName={businessToDelete?.name || "this business"}
+        isDeleting={deleteMutation.isPending}
+      />
     </>
   );
 }

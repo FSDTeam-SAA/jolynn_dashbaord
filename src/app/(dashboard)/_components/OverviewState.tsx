@@ -1,34 +1,77 @@
-import React from 'react'
-import { Building2, MoreHorizontal, Users2, Files } from 'lucide-react'
+"use client";
+
+import React from "react";
+import { Building2, MoreHorizontal, Users2, Files } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+
+type OverviewResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: {
+    totalBusinesses: number;
+    pendingApprovals: number;
+    activeUsers: number;
+    totalReports: number;
+  };
+};
 
 function OverviewState() {
+  const { data: session } = useSession();
+  const accessToken = (
+    session?.user as { accessToken?: string } | undefined
+  )?.accessToken;
+
+  const { data: overviewData } = useQuery<OverviewResponse>({
+    queryKey: ["overviewData", accessToken],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/dashboard/cards`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to fetch overview data");
+      }
+
+      return data;
+    },
+    enabled: Boolean(accessToken),
+  });
+
+  const overview = overviewData?.data;
+
   const stats = [
     {
-      title: 'Total Businesses',
-      value: '1,160',
+      title: "Total Businesses",
+      value: overview?.totalBusinesses ?? 0,
       icon: Building2,
     },
     {
-      title: 'Pending Approvals',
-      value: '16',
+      title: "Pending Approvals",
+      value: overview?.pendingApprovals ?? 0,
       icon: MoreHorizontal,
     },
     {
-      title: 'Active Users',
-      value: '1264',
+      title: "Active Users",
+      value: overview?.activeUsers ?? 0,
       icon: Users2,
     },
     {
-      title: 'Reports',
-      value: '12',
+      title: "Reports",
+      value: overview?.totalReports ?? 0,
       icon: Files,
     },
-  ]
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, index) => {
-        const Icon = stat.icon
+        const Icon = stat.icon;
         return (
           <div 
             key={index} 
@@ -39,7 +82,7 @@ function OverviewState() {
                 {stat.title}
               </span>
               <span className="text-3xl font-bold text-[#1e266e] tracking-tight">
-                {stat.value}
+                {stat.value.toLocaleString()}
               </span>
             </div>
             
@@ -50,7 +93,7 @@ function OverviewState() {
         )
       })}
     </div>
-  )
+  );
 }
 
-export default OverviewState
+export default OverviewState;

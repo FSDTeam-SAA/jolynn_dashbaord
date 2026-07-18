@@ -1,21 +1,97 @@
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from 'next/link'
+"use client";
+
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+
+type RecentActivityResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: {
+    latestReports: Array<{
+      _id: string;
+      userId?: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+      };
+      serviceId?: {
+        title?: string;
+      };
+      message: string;
+      createdAt: string;
+    }>;
+    newRegistrations: Array<{
+      _id: string;
+      firstName?: string;
+      lastName?: string;
+      businessName?: string;
+      email?: string;
+      status: string;
+      createdAt: string;
+    }>;
+  };
+};
 
 export default function NewActionsAndRegistration() {
-  // Pending Actions data array
-  const pendingActions = [
-    { id: 1, label: 'Business Card Reviews', count: 2 },
-    { id: 2, label: 'Listing approvals', count: 2 },
-    { id: 3, label: 'Reported reviews', count: 2 },
-  ]
+  const { data: session } = useSession();
+  const accessToken = (
+    session?.user as { accessToken?: string } | undefined
+  )?.accessToken;
 
-  // New Registrations data array
-  const newRegistrations = [
-    { id: 1, name: 'Metro HVAC Services', status: 'Pending' },
-    { id: 2, name: 'Summit Contractors', status: 'Pending' },
-    { id: 3, name: 'Sunrise Roofing Inc.', status: 'Pending' },
-  ]
+  const { data: recentActivityResponse } = useQuery<RecentActivityResponse>({
+    queryKey: ["recentActivity", accessToken],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/dashboard/recent-activity`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to fetch recent activity");
+      }
+
+      return data;
+    },
+    enabled: Boolean(accessToken),
+  });
+
+  const pendingActions =
+    recentActivityResponse?.data.latestReports.map((report) => {
+      const reporterName = [
+        report.userId?.firstName,
+        report.userId?.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return {
+        id: report._id,
+        label: `${reporterName || "A user"} reported ${report.serviceId?.title || "a service"}`,
+        count: 1,
+      };
+    }) ?? [];
+
+  const newRegistrations =
+    recentActivityResponse?.data.newRegistrations.map((registration) => ({
+      id: registration._id,
+      name:
+        registration.businessName ||
+        [registration.firstName, registration.lastName]
+          .filter(Boolean)
+          .join(" ") ||
+        registration.email ||
+        "New registration",
+      status:
+        registration.status.charAt(0).toUpperCase() +
+        registration.status.slice(1),
+    })) ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 p-1 w-full mt-10">
@@ -27,7 +103,7 @@ export default function NewActionsAndRegistration() {
             Pending Actions
           </CardTitle>
           <Link 
-            href="/pending-actions" 
+            href="/business-management" 
             className="text-xs font-semibold text-[#3b4cb8] hover:underline"
           >
             View all
@@ -46,6 +122,11 @@ export default function NewActionsAndRegistration() {
                 </span>
               </div>
             ))}
+            {pendingActions.length === 0 && (
+              <div className="py-4 text-sm font-medium text-gray-500">
+                No recent reports
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -57,7 +138,7 @@ export default function NewActionsAndRegistration() {
             New Registrations
           </CardTitle>
           <Link 
-            href="/new-registrations" 
+            href="/user-management" 
             className="text-xs font-semibold text-[#3b4cb8] hover:underline"
           >
             View all
@@ -76,10 +157,15 @@ export default function NewActionsAndRegistration() {
                 </span>
               </div>
             ))}
+            {newRegistrations.length === 0 && (
+              <div className="py-4 text-sm font-medium text-gray-500">
+                No new registrations
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
     </div>
-  )
+  );
 }

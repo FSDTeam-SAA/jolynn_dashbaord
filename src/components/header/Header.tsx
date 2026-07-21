@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { getPageConfig } from "@/lib/page-config";
+import { useAdminProfile } from "@/hooks/use-admin-profile";
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
@@ -24,10 +25,18 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const { data: session } = useSession();
 
   const user = session?.user as {
+    name?: string;
     email?: string;
-  };
+    accessToken?: string;
+    token?: string;
+  } | undefined;
 
-  const email = user?.email;
+  const accessToken = user?.accessToken ?? user?.token;
+  const { data: profile } = useAdminProfile(accessToken);
+  const profileName = profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+  const name = profileName || user?.name || "Admin User";
+  const email = profile?.email || user?.email || "";
+  const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,11 +66,11 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         </button>
 
         <div className="lg:ml-[295px]">
-          <h1 className="text-2xl font-bold leading-[150%] text-[#CD9B46]">
+          <h1 className="text-2xl font-bold leading-[150%] text-[#000000]">
             {pageInfo.title}
           </h1>
 
-          <p className="hidden md:block text-sm text-[#6B7280]">
+          <p className="hidden md:block text-sm text-[#2A2F4D]">
             {pageInfo.description}
           </p>
         </div>
@@ -74,13 +83,14 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <span className="hidden sm:block text-sm text-black">
-            {email}
-          </span>
+          <div className="hidden max-w-[220px] text-right sm:block">
+            <p className="truncate text-sm font-semibold text-[#292D73]">{name}</p>
+            <p className="truncate text-[11px] text-gray-500">{email}</p>
+          </div>
 
-          <Avatar className="h-9 w-9">
-            <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback className="text-black">TA</AvatarFallback>
+          <Avatar className="h-10 w-10 border border-[#292D73]/15">
+            <AvatarImage src={profile?.profilePicture || ""} alt={name} className="object-cover" />
+            <AvatarFallback className="bg-[#eef2ff] font-semibold text-[#292D73]">{initials || "A"}</AvatarFallback>
           </Avatar>
         </div>
       </div>

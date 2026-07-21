@@ -22,6 +22,7 @@ import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LogoutModal from "@/components/logoutModal/LogoutModal";
+import { useAdminProfile } from "@/hooks/use-admin-profile";
 
 const navigation = [
   { name: "Dashboard Overview", href: "/", icon: LayoutDashboard },
@@ -75,8 +76,16 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const name = session?.user?.name || "Admin User";
-  const email = session?.user?.email || "admin@example.com";
+  const sessionUser = session?.user as
+    | { name?: string; email?: string; accessToken?: string; token?: string }
+    | undefined;
+  const accessToken = sessionUser?.accessToken ?? sessionUser?.token;
+  const { data: profile } = useAdminProfile(accessToken);
+  const profileName =
+    profile?.fullName ||
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+  const name = profileName || sessionUser?.name || "Admin User";
+  const email = profile?.email || sessionUser?.email || "admin@example.com";
   const username = `@${email.split("@")[0]}`;
   const initials = name
     .split(" ")
@@ -216,7 +225,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
             className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-white transition-colors hover:bg-white/10"
           >
             <Avatar className="h-10 w-10 border border-white/30 bg-white">
-              <AvatarImage src={session?.user?.image || ""} alt={name} />
+              <AvatarImage src={profile?.profilePicture || ""} alt={name} className="object-cover" />
               <AvatarFallback className="bg-white text-sm font-semibold text-[#292D73]">
                 {initials}
               </AvatarFallback>

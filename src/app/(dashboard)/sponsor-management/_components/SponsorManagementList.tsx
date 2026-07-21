@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Select,
   SelectContent,
@@ -155,7 +156,20 @@ export default function SponsorManagementList() {
                 return (
                   <tr key={sponsor._id} className="hover:bg-slate-50/50">
                     <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">
-                      {sponsor.title}
+                      <div className="flex items-center gap-3">
+                        {sponsor.image && (
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gray-100 bg-gray-50">
+                            <Image
+                              src={sponsor.image}
+                              alt={`${sponsor.title} sponsor`}
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                        <span className="min-w-0 truncate">{sponsor.title}</span>
+                      </div>
                     </td>
                     <td className="max-w-[500px] px-4 py-4 text-center text-gray-600">
                       <div

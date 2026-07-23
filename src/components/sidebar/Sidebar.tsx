@@ -61,6 +61,11 @@ const navigation = [
     href: "/user-management",
     icon: UserRound,
   },
+   {
+    name: "Contact Message",
+    href: "/contact-message",
+    icon: UserRound,
+  },
 ];
 
 interface SidebarProps {

@@ -24,6 +24,7 @@ export type Sponsor = {
   content: string;
   image?: string;
   imagePublicId?: string;
+  link?: string;
   status?: "active" | "inactive";
   createdAt: string;
   updatedAt: string;

@@ -17,6 +17,7 @@ interface EditSponsorProps {
 export default function EditSponsor({ sponsorId }: EditSponsorProps) {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [siteLink, setSiteLink] = useState("");
   const [content, setContent] = useState("");
   const [image, setImage] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,6 +37,7 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
   useEffect(() => {
     if (response?.data) {
       setTitle(response.data.title);
+      setSiteLink(response.data.link || "");
       setContent(response.data.content);
       setImage(response.data.image || "");
     }
@@ -66,6 +68,7 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
     if (!title.trim() || !content.trim()) return toast.error("Title and content are required");
     const body = new FormData();
     body.append("title", title.trim());
+    body.append("link", siteLink.trim());
     body.append("content", content);
     if (imageFile) body.append("image", imageFile);
     updateMutation.mutate(body);
@@ -92,6 +95,22 @@ export default function EditSponsor({ sponsorId }: EditSponsorProps) {
             id="edit-sponsor-title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            className="h-11"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="edit-sponsor-site-link"
+            className="text-sm font-medium text-gray-700"
+          >
+            Site Link
+          </label>
+          <Input
+            id="edit-sponsor-site-link"
+            type="url"
+            value={siteLink}
+            onChange={(event) => setSiteLink(event.target.value)}
+            placeholder="https://example.com"
             className="h-11"
           />
         </div>

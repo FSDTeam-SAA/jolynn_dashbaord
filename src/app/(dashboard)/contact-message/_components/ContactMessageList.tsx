@@ -30,8 +30,9 @@ type ContactMessageResponse = {
 export default function ContactMessageList() {
   const [page, setPage] = useState(1);
   const [messageToView, setMessageToView] = useState<string | null>(null);
-  const [messageToDelete, setMessageToDelete] =
-    useState<ContactMessage | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<ContactMessage | null>(
+    null,
+  );
   const limit = 10;
   const { data: session } = useSession();
   const queryClient = useQueryClient();
@@ -101,13 +102,13 @@ export default function ContactMessageList() {
 
   return (
     <>
-      <section className="flex w-full flex-col gap-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
-        <div>
+      <section className="flex w-full flex-col gap-6">
+        {/* <div>
           <h1 className="text-xl font-bold text-[#292D73]">Contact Messages</h1>
           <p className="mt-1 text-sm text-gray-500">
             View and manage messages received from the contact form.
           </p>
-        </div>
+        </div> */}
 
         <div className="w-full overflow-x-auto rounded-xl border border-gray-100">
           <table className="w-full min-w-[980px] border-collapse text-left">

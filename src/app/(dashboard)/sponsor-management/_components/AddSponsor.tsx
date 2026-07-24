@@ -12,6 +12,7 @@ import { toast } from "sonner";
 export default function AddSponsor() {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [siteLink, setSiteLink] = useState("");
   const [content, setContent] = useState("");
   const [image, setImage] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -56,6 +57,7 @@ export default function AddSponsor() {
       return toast.error("Title, content and image are required");
     const body = new FormData();
     body.append("title", title.trim());
+    if (siteLink.trim()) body.append("link", siteLink.trim());
     body.append("content", content);
     body.append("image", imageFile);
     createMutation.mutate(body);
@@ -80,6 +82,22 @@ export default function AddSponsor() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Enter sponsor title"
+            className="h-11"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="sponsor-site-link"
+            className="text-sm font-medium text-gray-700"
+          >
+            Site Link
+          </label>
+          <Input
+            id="sponsor-site-link"
+            type="url"
+            value={siteLink}
+            onChange={(event) => setSiteLink(event.target.value)}
+            placeholder="https://example.com"
             className="h-11"
           />
         </div>

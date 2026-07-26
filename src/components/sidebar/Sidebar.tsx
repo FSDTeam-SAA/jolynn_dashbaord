@@ -18,6 +18,7 @@ import {
   UserRound,
   Wrench,
   X,
+  FileUser,
 } from "lucide-react";
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
@@ -62,6 +63,7 @@ const navigation = [
     href: "/job-management",
     icon: GraduationCap,
   },
+
   {
     name: "User Management",
     href: "/user-management",
@@ -70,7 +72,7 @@ const navigation = [
    {
     name: "Contact Message",
     href: "/contact-message",
-    icon: UserRound,
+    icon: FileUser ,
   },
 ];
 

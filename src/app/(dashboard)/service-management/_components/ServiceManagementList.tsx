@@ -23,7 +23,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import DeleteModal from "@/components/deleteModal/DeleteModal";
 
-type Service = {
+export type Service = {
   _id: string;
   ownerId: string;
   title: string;
@@ -43,6 +43,12 @@ type ServiceListResponse = {
 
 type ServiceOwner = {
   _id: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+  phoneNumber?: string;
+  businessName?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -224,11 +230,12 @@ export default function ServiceManagementList() {
         </div>
 
         <div className="w-full overflow-x-auto rounded-xl border border-gray-100">
-          <table className="w-full min-w-[900px] border-collapse text-left">
+          <table className="w-full min-w-[1050px] border-collapse text-left">
             <thead>
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="w-[90px] rounded-tl-xl py-3.5 pl-6 pr-4">Image</th>
                 <th className="px-4 py-3.5 text-center">Category Name</th>
+                <th className="px-4 py-3.5 text-center">Business Man</th>
                 <th className="px-4 py-3.5 text-center">Location</th>
                 <th className="px-4 py-3.5 text-center">Created At</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
@@ -239,6 +246,15 @@ export default function ServiceManagementList() {
               {services.map((service) => {
                 const status = service.status ?? "active";
                 const owner = ownersById.get(service.ownerId);
+                const ownerName = owner
+                  ? owner.businessName ||
+                    [owner.firstName, owner.lastName].filter(Boolean).join(" ") ||
+                    owner.username ||
+                    owner.email ||
+                    "N/A"
+                  : ownerQueries.some((query) => query.isPending)
+                    ? "Loading..."
+                    : "N/A";
                 const location = owner
                   ? [
                       owner.address,
@@ -273,6 +289,9 @@ export default function ServiceManagementList() {
                       <span className="rounded-md bg-[#eef2ff] px-2.5 py-1 text-xs font-semibold text-[#3b4cb8]">
                         {service.title}
                       </span>
+                    </td>
+                    <td className="max-w-[240px] px-4 py-4 text-center text-gray-700">
+                      <span className="line-clamp-2 font-medium">{ownerName}</span>
                     </td>
                     <td className="max-w-[300px] px-4 py-4 text-center text-gray-700">
                       <span className="line-clamp-2">{location}</span>
@@ -316,7 +335,7 @@ export default function ServiceManagementList() {
                   </tr>
                 );
               })}
-              {services.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-sm font-medium text-gray-500">No services found</td></tr>}
+              {services.length === 0 && <tr><td colSpan={7} className="py-8 text-center text-sm font-medium text-gray-500">No services found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -331,7 +350,18 @@ export default function ServiceManagementList() {
       </div>
 
       {selectedServiceId && (
-        <ViewService isOpen onClose={() => setSelectedServiceId(null)} serviceId={selectedServiceId} />
+        <ViewService
+          isOpen
+          onClose={() => setSelectedServiceId(null)}
+          service={
+            services.find((service) => service._id === selectedServiceId) ?? null
+          }
+          owner={
+            ownersById.get(
+              services.find((service) => service._id === selectedServiceId)?.ownerId ?? "",
+            ) ?? null
+          }
+        />
       )}
 
       <DeleteModal

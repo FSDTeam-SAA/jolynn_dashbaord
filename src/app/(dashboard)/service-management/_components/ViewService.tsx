@@ -9,64 +9,59 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
+import type { Service } from "./ServiceManagementList";
 
 interface ViewServiceProps {
   isOpen: boolean;
   onClose: () => void;
-  serviceId: string;
+  service: Service | null;
+  owner: ServiceOwner | null;
 }
 
-type ServiceDetailsResponse = {
-  statusCode: number;
-  success: boolean;
-  message: string;
-  data: {
-    _id: string;
-    ownerId: string;
-    title: string;
-    description: string;
-    logo?: { url?: string; publicId?: string };
-    status?: "active" | "inactive";
-    createdAt: string;
-    updatedAt: string;
-  };
+type ServiceOwner = {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+  phoneNumber?: string;
+  businessName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postcode?: string;
+  serviceArea?: string;
 };
 
 export default function ViewService({
   isOpen,
   onClose,
-  serviceId,
+  service,
+  owner,
 }: ViewServiceProps) {
-  const { data: session } = useSession();
-  const accessToken = (
-    session?.user as { accessToken?: string } | undefined
-  )?.accessToken;
-
-  const { data: serviceResponse, isPending } =
-    useQuery<ServiceDetailsResponse>({
-      queryKey: ["service", serviceId, accessToken],
-      queryFn: async () => {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/service/my-services/${serviceId}`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const data = await response.json();
-        if (!response.ok || !data?.success) {
-          throw new Error(data?.message || "Failed to fetch service details");
-        }
-        return data;
-      },
-      enabled: isOpen && Boolean(serviceId) && Boolean(accessToken),
-    });
-
-  const service = serviceResponse?.data;
   const status = service?.status ?? "active";
   const statusStyles =
     status === "active"
       ? "border-[#22c55e] bg-[#f0fdf4] text-[#22c55e]"
       : "border-[#ef4444] bg-[#fef2f2] text-[#ef4444]";
+  const ownerName = owner
+    ? owner.businessName ||
+      [owner.firstName, owner.lastName].filter(Boolean).join(" ") ||
+      owner.username ||
+      owner.email ||
+      "N/A"
+    : "N/A";
+  const location = owner
+    ? [
+        owner.address,
+        owner.city,
+        owner.state,
+        owner.postcode,
+        owner.country,
+      ]
+        .filter(Boolean)
+        .join(", ") || owner.serviceArea || "N/A"
+    : "N/A";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -74,7 +69,7 @@ export default function ViewService({
         className="w-[90%] max-w-[560px] gap-0 rounded-2xl border-0 bg-white p-6 shadow-2xl focus:outline-none"
         overlayClassName="bg-slate-950/35 backdrop-blur-[3px]"
         showCloseButton={false}
-        data-service-id={serviceId}
+        data-service-id={service?._id}
       >
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
           <DialogTitle className="text-xl font-bold tracking-tight text-gray-800">
@@ -85,8 +80,6 @@ export default function ViewService({
           </button>
         </DialogHeader>
 
-        {isPending && <div className="py-8 text-center text-sm font-medium text-gray-500">Loading service details...</div>}
-
         {service && (
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
             {service.logo?.url && (
@@ -95,7 +88,10 @@ export default function ViewService({
               </div>
             )}
             <Detail label="Service Provider Name" value={service.title} />
-            <Detail label="Owner ID" value={service.ownerId} />
+            <Detail label="Business Man" value={ownerName} />
+            <Detail label="Location" value={location} />
+            <Detail label="Email" value={owner?.email || "N/A"} />
+            <Detail label="Phone" value={owner?.phoneNumber || "N/A"} />
             <div className="sm:col-span-2"><Detail label="Description" value={service.description} /></div>
             <Detail label="Created" value={new Date(service.createdAt).toLocaleDateString()} />
             <div className="flex flex-col gap-1.5">

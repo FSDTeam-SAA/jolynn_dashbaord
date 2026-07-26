@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquareWarning,
+  Tags,
   Settings,
   UserRound,
   Wrench,
@@ -35,6 +36,11 @@ const navigation = [
     name: "Service Management",
     href: "/service-management",
     icon: Wrench,
+  },
+  {
+    name: "Category Management",
+    href: "/category-management",
+    icon: Tags,
   },
   {
     name: "Sponsor Management",

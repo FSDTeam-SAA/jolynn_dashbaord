@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useDeferredValue, useEffect, useState } from "react";
-import { Eye, Search } from "lucide-react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Eye, ImageIcon, Search } from "lucide-react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,7 +13,12 @@ import {
 } from "@/components/ui/select";
 import Pagination from "@/components/pagination/Pagination";
 import ViewService from "./ViewService";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import DeleteModal from "@/components/deleteModal/DeleteModal";
@@ -25,7 +31,6 @@ type Service = {
   logo?: { url?: string; publicId?: string };
   status?: "active" | "inactive";
   createdAt: string;
-  updatedAt: string;
 };
 
 type ServiceListResponse = {
@@ -34,6 +39,22 @@ type ServiceListResponse = {
   message: string;
   meta: { page: number; limit: number; total: number };
   data: Service[];
+};
+
+type ServiceOwner = {
+  _id: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postcode?: string;
+  serviceArea?: string;
+};
+
+type ServiceOwnerResponse = {
+  success: boolean;
+  message: string;
+  data: ServiceOwner;
 };
 
 export default function ServiceManagementList() {
@@ -81,7 +102,43 @@ export default function ServiceManagementList() {
     },
   });
 
-  const services = serviceResponse?.data ?? [];
+  const services = useMemo(
+    () => serviceResponse?.data ?? [],
+    [serviceResponse?.data],
+  );
+  const ownerIds = useMemo(
+    () => Array.from(new Set(services.map((service) => service.ownerId).filter(Boolean))),
+    [services],
+  );
+  const ownerQueries = useQueries({
+    queries: ownerIds.map((ownerId) => ({
+      queryKey: ["service-owner-location", ownerId, accessToken],
+      queryFn: async (): Promise<ServiceOwnerResponse> => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${ownerId}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Failed to fetch service location");
+        }
+        return data;
+      },
+      enabled: Boolean(accessToken),
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    })),
+  });
+  const ownersById = useMemo(
+    () =>
+      new Map(
+        ownerQueries
+          .map((query) => query.data?.data)
+          .filter((owner): owner is ServiceOwner => Boolean(owner))
+          .map((owner) => [owner._id, owner]),
+      ),
+    [ownerQueries],
+  );
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -167,14 +224,13 @@ export default function ServiceManagementList() {
         </div>
 
         <div className="w-full overflow-x-auto rounded-xl border border-gray-100">
-          <table className="w-full min-w-[1050px] border-collapse text-left">
+          <table className="w-full min-w-[900px] border-collapse text-left">
             <thead>
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
-                <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Service Provider Name</th>
-                <th className="px-4 py-3.5 text-center">Category</th>
-                <th className="px-4 py-3.5 text-center">Description</th>
+                <th className="w-[90px] rounded-tl-xl py-3.5 pl-6 pr-4">Image</th>
+                <th className="px-4 py-3.5 text-center">Category Name</th>
+                <th className="px-4 py-3.5 text-center">Location</th>
                 <th className="px-4 py-3.5 text-center">Created At</th>
-                <th className="px-4 py-3.5 text-center">Updated At</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="rounded-tr-xl py-3.5 pl-14 pr-6 text-center">Action</th>
               </tr>
@@ -182,18 +238,47 @@ export default function ServiceManagementList() {
             <tbody className="divide-y divide-gray-100 bg-white text-sm">
               {services.map((service) => {
                 const status = service.status ?? "active";
+                const owner = ownersById.get(service.ownerId);
+                const location = owner
+                  ? [
+                      owner.address,
+                      owner.city,
+                      owner.state,
+                      owner.postcode,
+                      owner.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || owner.serviceArea || "N/A"
+                  : ownerQueries.some((query) => query.isPending)
+                    ? "Loading..."
+                    : "N/A";
                 return (
                   <tr key={service._id} className="transition-colors hover:bg-slate-50/50">
-                    <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">{service.title}</td>
-                    <td className="px-4 py-4 text-center"><span className="rounded-md bg-[#eef2ff] px-2.5 py-1 text-xs font-medium text-[#3b4cb8]">Service</span></td>
-                    <td className="max-w-[260px] px-4 py-4 text-center text-gray-700">
-                      <span className="line-clamp-2">{service.description}</span>
+                    <td className="py-3 pl-6 pr-4">
+                      <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-slate-50">
+                        {service.logo?.url ? (
+                          <Image
+                            src={service.logo.url}
+                            alt={service.title}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-gray-400" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="rounded-md bg-[#eef2ff] px-2.5 py-1 text-xs font-semibold text-[#3b4cb8]">
+                        {service.title}
+                      </span>
+                    </td>
+                    <td className="max-w-[300px] px-4 py-4 text-center text-gray-700">
+                      <span className="line-clamp-2">{location}</span>
                     </td>
                     <td className="px-4 py-4 text-center font-medium text-gray-700">
                       {new Date(service.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-4 text-center text-gray-700">
-                      {new Date(service.updatedAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <Select
@@ -231,7 +316,7 @@ export default function ServiceManagementList() {
                   </tr>
                 );
               })}
-              {services.length === 0 && <tr><td colSpan={7} className="py-8 text-center text-sm font-medium text-gray-500">No services found</td></tr>}
+              {services.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-sm font-medium text-gray-500">No services found</td></tr>}
             </tbody>
           </table>
         </div>

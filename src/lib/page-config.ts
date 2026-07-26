@@ -59,6 +59,10 @@ export const pageConfig: Record<
     title: "Service Management",
     description: "Manage service providers and availability",
   },
+  "/category-management": {
+    title: "Category Management",
+    description: "Manage service categories and their availability",
+  },
   "/sponsor-management": {
     title: "Sponsor Management",
     description: "Manage sponsors and sponsor content",

@@ -44,8 +44,6 @@ export default function PersonalInfo() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState("male");
-  const [streetAddress, setStreetAddress] = useState("");
   const [location, setLocation] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [profileImageFile, setProfileImageFile] = useState<File>();
@@ -77,8 +75,6 @@ export default function PersonalInfo() {
     setLastName(user.lastName || "");
     setEmail(user.email || "");
     setPhone(user.phoneNumber || "");
-    setGender(user.gender || "male");
-    setStreetAddress(user.address || "");
     setLocation(user.state || user.country || "");
     setPostalCode(user.postcode || "");
     setProfileImagePreview(user.profilePicture || "");
@@ -96,9 +92,7 @@ export default function PersonalInfo() {
       const formData = new FormData();
       formData.append("firstName", firstName.trim());
       formData.append("lastName", lastName.trim());
-      formData.append("gender", gender);
       formData.append("phoneNumber", phone.trim());
-      formData.append("address", streetAddress.trim());
       formData.append("state", location.trim());
       formData.append("postcode", postalCode.trim());
       if (profileImageFile) {
@@ -188,25 +182,7 @@ export default function PersonalInfo() {
           </p>
         )}
         <form onSubmit={handleSubmit} className="mt-7">
-          <fieldset className="flex gap-6" disabled={disabled}>
-            <legend className="sr-only">Gender</legend>
-            {["male", "female"].map((option) => (
-              <label
-                key={option}
-                className="flex cursor-pointer items-center gap-2 text-sm capitalize text-gray-700"
-              >
-                <input
-                  type="radio"
-                  name="gender"
-                  checked={gender === option}
-                  onChange={() => setGender(option)}
-                  className="h-4 w-4 accent-[#292D73]"
-                />
-                {option}
-              </label>
-            ))}
-          </fieldset>
-          <div className="mt-7 grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <Field label="First Name">
               <input
                 required
@@ -241,16 +217,6 @@ export default function PersonalInfo() {
                 className={inputClass}
               />
             </Field>
-            <div className="sm:col-span-2">
-              <Field label="Street Address">
-                <input
-                  value={streetAddress}
-                  disabled={disabled}
-                  onChange={(event) => setStreetAddress(event.target.value)}
-                  className={inputClass}
-                />
-              </Field>
-            </div>
             <Field label="Location">
               <input
                 value={location}

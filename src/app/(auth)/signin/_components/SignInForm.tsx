@@ -91,7 +91,7 @@ function SignInForm() {
               htmlFor="emailUsername"
               className="text-base font-semibold leading-[100%] text-[#4365D0]"
             >
-              Email Address/Username
+              Email
             </Label>
             <Input
               id="emailUsername"

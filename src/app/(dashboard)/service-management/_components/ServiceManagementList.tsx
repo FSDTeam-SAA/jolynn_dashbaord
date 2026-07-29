@@ -235,8 +235,10 @@ export default function ServiceManagementList() {
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="w-[90px] rounded-tl-xl py-3.5 pl-6 pr-4">Image</th>
                 <th className="px-4 py-3.5 text-center">Category Name</th>
-                <th className="px-4 py-3.5 text-center">Business Man</th>
-                <th className="px-4 py-3.5 text-center">Location</th>
+                <th className="px-4 py-3.5 text-center">Business Name</th>
+                <th className="px-4 py-3.5 text-center">
+                  Location (City Name)
+                </th>
                 <th className="px-4 py-3.5 text-center">Created At</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="rounded-tr-xl py-3.5 pl-14 pr-6 text-center">Action</th>
@@ -256,15 +258,7 @@ export default function ServiceManagementList() {
                     ? "Loading..."
                     : "N/A";
                 const location = owner
-                  ? [
-                      owner.address,
-                      owner.city,
-                      owner.state,
-                      owner.postcode,
-                      owner.country,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || owner.serviceArea || "N/A"
+                  ? owner.city || "N/A"
                   : ownerQueries.some((query) => query.isPending)
                     ? "Loading..."
                     : "N/A";
@@ -307,7 +301,15 @@ export default function ServiceManagementList() {
                           updateStatusMutation.mutate({ id: service._id, status: value })
                         }
                       >
-                        <SelectTrigger className="mx-auto h-8 w-[105px] rounded-full text-xs font-semibold"><SelectValue /></SelectTrigger>
+                        <SelectTrigger
+                          className={`mx-auto h-8 w-[105px] rounded-full text-xs font-semibold ${
+                            status === "active"
+                              ? "border-green-200 bg-green-50 text-green-600"
+                              : "border-red-200 bg-red-50 text-red-600"
+                          }`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent>
                       </Select>
                     </td>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useDeferredValue, useEffect, useState } from "react";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import Pagination from "@/components/pagination/Pagination";
 import ViewUser from "./ViewUser";
+import DeleteModal from "@/components/deleteModal/DeleteModal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ export default function UserManagementList() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
   const deferredSearch = useDeferredValue(searchQuery.trim());
   const limit = 10;
   const { data: session } = useSession();
@@ -98,6 +100,30 @@ export default function UserManagementList() {
     },
     onSuccess: (data) => {
       toast.success(data?.message || "User status updated");
+      queryClient.invalidateQueries({ queryKey: ["managedUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["managedUser"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Failed to delete user");
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "User deleted successfully");
+      setUserToDelete(null);
+      if (users.length === 1 && page > 1) setPage((current) => current - 1);
       queryClient.invalidateQueries({ queryKey: ["managedUsers"] });
       queryClient.invalidateQueries({ queryKey: ["managedUser"] });
     },
@@ -222,6 +248,14 @@ export default function UserManagementList() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
+                        <button
+                          onClick={() => setUserToDelete(user)}
+                          disabled={deleteMutation.isPending}
+                          aria-label={`Delete ${displayName}`}
+                          className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -255,6 +289,24 @@ export default function UserManagementList() {
           userId={selectedUserId}
         />
       )}
+      <DeleteModal
+        isOpen={Boolean(userToDelete)}
+        onClose={() =>
+          !deleteMutation.isPending && setUserToDelete(null)
+        }
+        onConfirm={() =>
+          userToDelete && deleteMutation.mutate(userToDelete._id)
+        }
+        itemName={
+          userToDelete?.username ||
+          [userToDelete?.firstName, userToDelete?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          userToDelete?.email ||
+          "this user"
+        }
+        isDeleting={deleteMutation.isPending}
+      />
     </>
   );
 }

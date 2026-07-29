@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Building2, MoreHorizontal, Users2, Files } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -50,21 +51,25 @@ function OverviewState() {
       title: "Total Businesses",
       value: overview?.totalBusinesses ?? 0,
       icon: Building2,
+      href: "/business-management",
     },
     {
       title: "Pending Approvals",
       value: overview?.pendingApprovals ?? 0,
       icon: MoreHorizontal,
+      href: "/service-management",
     },
     {
       title: "Active Users",
       value: overview?.activeUsers ?? 0,
       icon: Users2,
+      href: "/user-management",
     },
     {
       title: "Reports",
       value: overview?.totalReports ?? 0,
       icon: Files,
+      href: "/report-management",
     },
   ];
 
@@ -73,9 +78,11 @@ function OverviewState() {
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <div 
+          <Link
             key={index} 
-            className="flex items-center justify-between px-4 py-7 bg-white rounded-[8px] shadow-[0px_4px_6px_0px_#0000001A]"
+            href={stat.href}
+            aria-label={`View ${stat.title}`}
+            className="flex items-center justify-between rounded-[8px] bg-white px-4 py-7 shadow-[0px_4px_6px_0px_#0000001A] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0px_8px_16px_0px_#0000001F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b4cb8] focus-visible:ring-offset-2"
           >
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-gray-500 tracking-wide">
@@ -89,7 +96,7 @@ function OverviewState() {
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#eef2ff] text-[#3b4cb8]">
               <Icon className="w-6 h-6 stroke-[1.75]" />
             </div>
-          </div>
+          </Link>
         )
       })}
     </div>

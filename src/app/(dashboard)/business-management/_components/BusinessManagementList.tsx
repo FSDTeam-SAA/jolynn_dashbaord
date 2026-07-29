@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useDeferredValue, useEffect, useState } from "react";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -227,13 +227,14 @@ export default function BusinessManagementList() {
 
       {/* Main Table Responsive Container */}
       <div className="w-full overflow-x-auto rounded-xl border border-gray-100">
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className="w-full text-left border-collapse min-w-[1000px]">
           {/* Dark Navy Table Header */}
           <thead>
             <tr className="bg-[#2b3674] text-white text-[11px] font-semibold uppercase tracking-wider">
               <th className="py-3.5 pl-6 pr-4 rounded-tl-xl">Business Name</th>
               <th className="py-3.5 px-4 text-center">Category</th>
               <th className="py-3.5 px-4 text-center">Owner</th>
+              <th className="py-3.5 px-4 text-center">Email</th>
               <th className="py-3.5 px-4 text-center">Status</th>
               <th className="py-3.5 pl-4 pr-25 text-right rounded-tr-xl">Action</th>
             </tr>
@@ -266,6 +267,16 @@ export default function BusinessManagementList() {
                 <td className="py-4 px-4 text-center text-gray-700 font-medium">
                   {[row.firstName, row.lastName].filter(Boolean).join(" ") ||
                     row.email}
+                </td>
+
+                {/* Email Column */}
+                <td className="py-4 px-4 text-center">
+                  <a
+                    href={`mailto:${row.email}`}
+                    className="break-all text-sm font-medium text-[#3b4cb8] hover:underline"
+                  >
+                    {row.email}
+                  </a>
                 </td>
 
                 {/* Status Column */}
@@ -337,6 +348,14 @@ export default function BusinessManagementList() {
                     >
                       <Eye className="w-4 h-4 stroke-[2]" />
                     </button>
+                    <a
+                      href={`mailto:${row.email}`}
+                      aria-label={`Email ${row.username || row.email}`}
+                      title={`Email ${row.email}`}
+                      className="cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] shadow-sm transition-colors hover:border-[#2b3674] hover:bg-[#eef2ff]"
+                    >
+                      <Mail className="h-4 w-4 stroke-[2]" />
+                    </a>
                   </div>
                 </td>
               </tr>
@@ -344,7 +363,7 @@ export default function BusinessManagementList() {
             {businesses.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="py-8 text-center text-sm font-medium text-gray-500"
                 >
                   No businesses found

@@ -55,6 +55,10 @@ export const pageConfig: Record<
     title: "User Management",
     description: "Manage user accounts and permissions",
   },
+  "/business-management": {
+    title: "Business Management",
+    description: "Manage business owners, approvals, and account status",
+  },
   "/service-management": {
     title: "Service Management",
     description: "Manage service providers and availability",

@@ -1,13 +1,13 @@
 import React from 'react'
 import OverviewState from './_components/OverviewState'
-import WebsiteVisitsChart from './_components/WebsiteVisitsChart'
 import NewActionsAndRegistration from './_components/NewActionsAndRegistration'
+import VisitsChartTabs from './_components/VisitsChartTabs'
 
 function page() {
   return (
     <div>
       <OverviewState />
-      <WebsiteVisitsChart />
+      <VisitsChartTabs />
       <NewActionsAndRegistration />
     </div>
   )

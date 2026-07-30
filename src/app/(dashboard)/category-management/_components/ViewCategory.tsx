@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, Hash, Tag, X, XCircle } from "lucide-react";
+import { CalendarDays, CheckCircle2, FileText, Tag, X, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -84,7 +84,7 @@ export default function ViewCategory({ category, onClose }: ViewCategoryProps) {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Detail icon={<Hash className="h-4 w-4" />} label="Sort Order" value={String(category.sortOrder ?? 0)} />
+                <Detail icon={<FileText className="h-4 w-4" />} label="Posts Count" value={String(category.businessOwnerCount ?? 0)} />
                 <Detail icon={<Tag className="h-4 w-4" />} label="Status" value={category.status || "N/A"} capitalize />
                 <Detail icon={<Tag className="h-4 w-4" />} label="Source" value={(category.source || "N/A").replaceAll("_", " ")} capitalize />
               </div>

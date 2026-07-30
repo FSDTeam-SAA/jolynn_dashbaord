@@ -6,11 +6,11 @@ import { Info } from "lucide-react";
 import {
   Area,
   AreaChart,
+  CartesianGrid,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  CartesianGrid,
 } from "recharts";
 import {
   Select,
@@ -22,7 +22,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-type MonthlyRegistrationResponse = {
+type MonthlySponsorVisitsResponse = {
   statusCode: number;
   success: boolean;
   message: string;
@@ -44,12 +44,12 @@ type TooltipProps = {
 const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-xl flex flex-col gap-0.5 min-w-[120px]">
-        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+      <div className="flex min-w-[120px] flex-col gap-0.5 rounded-2xl border border-gray-100 bg-white px-5 py-3 shadow-xl">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
           This Month
         </span>
         <span className="text-base font-bold text-gray-900">
-          {payload[0].value} Users
+          {payload[0].value} Visits
         </span>
         <span className="text-[11px] font-medium text-gray-400">
           {payload[0].payload.name}
@@ -57,10 +57,11 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
       </div>
     );
   }
+
   return null;
 };
 
-export default function WebsiteVisitsChart() {
+export default function SponsorVisitsChart() {
   const { data: session } = useSession();
   const accessToken = (
     session?.user as { accessToken?: string } | undefined
@@ -69,24 +70,23 @@ export default function WebsiteVisitsChart() {
   const years = Array.from({ length: 5 }, (_, index) =>
     (currentYear - index).toString(),
   );
+  const [selectedYear, setSelectedYear] = useState(years[0]);
 
-  const [selectedYear, setSelectedYear] = useState<string>(years[0]);
-
-  const { data: registrationResponse } =
-    useQuery<MonthlyRegistrationResponse>({
-      queryKey: ["monthlyRegistrations", selectedYear, accessToken],
+  const { data: sponsorVisitsResponse } =
+    useQuery<MonthlySponsorVisitsResponse>({
+      queryKey: ["monthlySponsorVisits", selectedYear, accessToken],
       queryFn: async () => {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/dashboard/monthly-registrations?year=${selectedYear}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/dashboard/monthly-sponsor-visits?year=${selectedYear}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          },
         );
         const data = await response.json();
 
         if (!response.ok || !data?.success) {
           throw new Error(
-            data?.message || "Failed to fetch monthly registrations"
+            data?.message || "Failed to fetch monthly sponsor visits",
           );
         }
 
@@ -96,26 +96,24 @@ export default function WebsiteVisitsChart() {
     });
 
   const chartData =
-    registrationResponse?.data.map((item) => ({
+    sponsorVisitsResponse?.data.map((item) => ({
       name: item.month,
       visits: item.count,
     })) ?? [];
 
   return (
-    <Card className="w-full bg-white rounded-xl border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6">
-      {/* Header Section */}
+    <Card className="w-full rounded-xl border border-gray-100 bg-white p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-6">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-lg font-bold text-[#1e266e] tracking-tight">
-            Website Visits
+          <CardTitle className="text-lg font-bold tracking-tight text-[#1e266e]">
+            Sponsor Visits
           </CardTitle>
-          <Info className="w-4 h-4 text-gray-400 cursor-pointer stroke-[2]" />
+          <Info className="h-4 w-4 cursor-pointer stroke-[2] text-gray-400" />
         </div>
 
-        {/* Dynamic shadcn Select Dropdown */}
         <div className="w-[130px]">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-9 w-full text-xs font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
+            <SelectTrigger className="h-9 w-full rounded-lg border-gray-200 bg-white text-xs font-medium text-gray-600 focus:border-gray-300 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent className="rounded-lg border-gray-100 shadow-lg">
@@ -123,7 +121,7 @@ export default function WebsiteVisitsChart() {
                 <SelectItem
                   key={year}
                   value={year}
-                  className="text-xs font-medium text-gray-600 focus:bg-slate-50 focus:text-[#1e266e] cursor-pointer"
+                  className="cursor-pointer text-xs font-medium text-gray-600 focus:bg-slate-50 focus:text-[#1e266e]"
                 >
                   {year}
                 </SelectItem>
@@ -133,26 +131,26 @@ export default function WebsiteVisitsChart() {
         </div>
       </CardHeader>
 
-      {/* Chart Canvas Section */}
-      <CardContent className="p-0 h-[280px] w-full">
+      <CardContent className="h-[280px] w-full p-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
           >
             <defs>
-              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient
+                id="sponsorVisitsGradient"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 <stop offset="5%" stopColor="#3b4cb8" stopOpacity={0.12} />
-                <stop offset="95%" stopColor="#3b4cb8" stopOpacity={0.0} />
+                <stop offset="95%" stopColor="#3b4cb8" stopOpacity={0} />
               </linearGradient>
             </defs>
 
-            <CartesianGrid
-              vertical={false}
-              stroke="#f3f4f6"
-              strokeDasharray="0"
-            />
-
+            <CartesianGrid vertical={false} stroke="#f3f4f6" />
             <XAxis
               dataKey="name"
               axisLine={false}
@@ -160,7 +158,6 @@ export default function WebsiteVisitsChart() {
               tick={{ fill: "#9ca3af", fontSize: 11, fontWeight: 500 }}
               dy={15}
             />
-
             <YAxis
               axisLine={false}
               tickLine={false}
@@ -168,7 +165,6 @@ export default function WebsiteVisitsChart() {
               domain={[0, "auto"]}
               allowDecimals={false}
             />
-
             <Tooltip
               content={<CustomTooltip />}
               cursor={{
@@ -178,14 +174,13 @@ export default function WebsiteVisitsChart() {
               }}
               position={{ y: 25 }}
             />
-
             <Area
               type="monotone"
               dataKey="visits"
               stroke="#1e266e"
               strokeWidth={3}
               fillOpacity={1}
-              fill="url(#chartGradient)"
+              fill="url(#sponsorVisitsGradient)"
               activeDot={{
                 r: 5,
                 fill: "#ffffff",

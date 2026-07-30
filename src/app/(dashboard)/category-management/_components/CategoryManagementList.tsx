@@ -19,6 +19,7 @@ export type Category = {
   source?: "admin" | "help_wanted" | "business_registration" | "service_creation";
   isActive: boolean;
   sortOrder?: number;
+  businessOwnerCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -158,7 +159,7 @@ export default function CategoryManagementList() {
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Category Name</th>
                 <th className="px-4 py-3.5 text-center">Description</th>
-                <th className="px-4 py-3.5 text-center">Sort Order</th>
+                <th className="px-4 py-3.5 text-center">Posts Count</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="px-4 py-3.5 text-center">Active</th>
                 <th className="rounded-tr-xl py-3.5 pl-4 pr-6 text-center">Action</th>
@@ -197,7 +198,7 @@ export default function CategoryManagementList() {
                       <p className="line-clamp-2">{category.description || "—"}</p>
                     </td>
                     <td className="px-4 py-4 text-center font-medium text-gray-600">
-                      {category.sortOrder ?? 0}
+                      {category.businessOwnerCount ?? 0}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${

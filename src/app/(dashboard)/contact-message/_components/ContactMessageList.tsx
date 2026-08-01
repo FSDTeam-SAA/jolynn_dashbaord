@@ -198,6 +198,14 @@ export default function ContactMessageList() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          <a
+                            href={`mailto:${contact.email}`}
+                            aria-label={`Email ${fullName || contact.email}`}
+                            title={`Email ${contact.email}`}
+                            className="cursor-pointer rounded-md border border-blue-200 p-2 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </a>
                           <button
                             type="button"
                             onClick={() => setMessageToDelete(contact)}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useDeferredValue, useEffect, useState } from "react";
-import { Eye, Search, Trash2 } from "lucide-react";
+import { Eye, Mail, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -248,6 +248,14 @@ export default function UserManagementList() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
+                        <a
+                          href={`mailto:${user.email}`}
+                          aria-label={`Email ${displayName}`}
+                          title={`Email ${user.email}`}
+                          className="cursor-pointer rounded-md border border-blue-200 p-1.5 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </a>
                         <button
                           onClick={() => setUserToDelete(user)}
                           disabled={deleteMutation.isPending}

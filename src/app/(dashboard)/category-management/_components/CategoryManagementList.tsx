@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, ImageIcon, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ export type Category = {
   name: string;
   slug?: string;
   description?: string;
+  logo?: { url?: string; publicId?: string };
   status?: "pending" | "approved" | "rejected";
   source?: "admin" | "help_wanted" | "business_registration" | "service_creation";
   isActive: boolean;
@@ -27,6 +28,7 @@ export type Category = {
 export type CategoryPayload = {
   name: string;
   description: string;
+  logo: File | null;
   isActive: boolean;
   sortOrder: number;
 };
@@ -81,15 +83,23 @@ export default function CategoryManagementList() {
       payload: CategoryPayload;
       categoryId?: string;
     }) => {
+      const formData = new FormData();
+      formData.append("name", payload.name.trim());
+      formData.append("description", payload.description.trim());
+      formData.append("isActive", String(payload.isActive));
+      formData.append("sortOrder", String(payload.sortOrder));
+      if (payload.logo) {
+        formData.append("logo", payload.logo);
+      }
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/service-categories${categoryId ? `/${categoryId}` : ""}`,
         {
           method: categoryId ? "PUT" : "POST",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify(payload),
+          body: formData,
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -159,7 +169,7 @@ export default function CategoryManagementList() {
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Category Name</th>
                 <th className="px-4 py-3.5 text-center">Description</th>
-                <th className="px-4 py-3.5 text-center">Posts Count</th>
+                <th className="px-4 py-3.5 text-center">Total Business Man</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="px-4 py-3.5 text-center">Active</th>
                 <th className="rounded-tr-xl py-3.5 pl-4 pr-6 text-center">Action</th>
@@ -191,8 +201,28 @@ export default function CategoryManagementList() {
                 categories.map((category) => (
                   <tr key={category._id} className="transition-colors hover:bg-slate-50/50">
                     <td className="py-4 pl-6 pr-4">
-                      <p className="font-semibold text-[#3b4cb8]">{category.name}</p>
-                      {category.slug && <p className="mt-0.5 text-xs text-gray-400">{category.slug}</p>}
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-slate-50 text-gray-400">
+                          <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                          {category.logo?.url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={category.logo.url}
+                              alt={`${category.name} logo`}
+                              className="absolute inset-0 h-full w-full bg-white object-cover"
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[#3b4cb8]">{category.name}</p>
+                          {category.slug && (
+                            <p className="mt-0.5 text-xs text-gray-400">{category.slug}</p>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="max-w-[360px] px-4 py-4 text-center text-gray-600">
                       <p className="line-clamp-2">{category.description || "—"}</p>

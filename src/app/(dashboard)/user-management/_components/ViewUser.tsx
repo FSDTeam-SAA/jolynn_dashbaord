@@ -37,8 +37,12 @@ type UserDetails = {
   businessWebsiteUrl?: string;
   serviceArea?: string;
   category?: string;
+  serviceCategoryId?: string;
+  verifiedForget?: boolean;
+  emailVerified?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  __v?: number;
 };
 
 interface ViewUserProps {
@@ -58,6 +62,9 @@ const formatDate = (value?: string) => {
         year: "numeric",
       }).format(date);
 };
+
+const formatBoolean = (value?: boolean) =>
+  typeof value === "boolean" ? (value ? "Yes" : "No") : "N/A";
 
 export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
   const { data: session } = useSession();
@@ -104,12 +111,12 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-h-[90vh] w-[92%] max-w-[720px] gap-0 overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl"
+        className="flex max-h-[90vh] w-[92%] max-w-[720px] flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl"
         overlayClassName="bg-slate-950/35 backdrop-blur-[3px]"
         showCloseButton={false}
         data-user-id={userId}
       >
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 border-b border-gray-100 px-6 py-5">
+        <DialogHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-gray-100 px-6 py-5">
           <DialogTitle className="text-xl font-bold text-gray-800">
             User Details
           </DialogTitle>
@@ -123,7 +130,7 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
           </button>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
           {isPending && (
             <div className="py-12 text-center text-sm text-gray-500">
               Loading user details...
@@ -137,8 +144,8 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
             </div>
           )}
           {user && (
-            <div className="space-y-7">
-              <div className="flex items-center gap-4 rounded-xl bg-[#f8f9ff] p-4">
+            <div className="space-y-5">
+              <div className="flex items-center gap-4 rounded-xl bg-[#f8f9ff] p-2">
                 <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#e8ecff] text-xl font-bold text-[#2b3674] shadow-sm">
                   {user.profilePicture ? (
                     <Image
@@ -157,6 +164,11 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                     {displayName}
                   </h3>
                   <p className="truncate text-sm text-gray-500">{user.email}</p>
+                  {isBusinessOwner && (user.businessName || user.category) && (
+                    <p className="mt-1 truncate text-sm font-medium text-gray-600">
+                      {[user.businessName, user.category].filter(Boolean).join(" • ")}
+                    </p>
+                  )}
                   <span
                     className={`mt-2 inline-block min-w-[80px] rounded-full border px-3 py-1 text-center text-xs font-semibold capitalize ${statusStyles}`}
                   >
@@ -184,7 +196,7 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                 <Detail label="Tag" value={user.tag} />
                 <Detail
                   label="Agreement Accepted"
-                  value={user.agreementAccepted ? "Yes" : "No"}
+                  value={formatBoolean(user.agreementAccepted)}
                 />
               </Section>
 
@@ -210,6 +222,10 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                     isLink
                   />
                   <Detail label="Category" value={user.category} />
+                  <Detail
+                    label="Service Category ID"
+                    value={user.serviceCategoryId}
+                  />
                   <div className="sm:col-span-2">
                     <Detail label="Service Area" value={user.serviceArea} />
                   </div>
@@ -227,10 +243,22 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
               <Section title="Account Information">
                 <Detail label="User ID" value={user._id} />
                 <Detail label="Account Status" value={user.status} capitalize />
+                <Detail
+                  label="Email Verified"
+                  value={formatBoolean(user.emailVerified)}
+                />
+                <Detail
+                  label="Verified Forget"
+                  value={formatBoolean(user.verifiedForget)}
+                />
                 <Detail label="Joined Date" value={formatDate(user.createdAt)} />
                 <Detail
                   label="Last Updated"
                   value={formatDate(user.updatedAt)}
+                />
+                <Detail
+                  label="Document Version"
+                  value={user.__v === undefined ? "N/A" : String(user.__v)}
                 />
               </Section>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Loader2, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -24,6 +24,7 @@ type CategoryFormModalProps = {
 const initialValues: CategoryPayload = {
   name: "",
   description: "",
+  logo: null,
   isActive: true,
   sortOrder: 0,
 };
@@ -37,6 +38,18 @@ export default function CategoryFormModal({
 }: CategoryFormModalProps) {
   const [values, setValues] = useState<CategoryPayload>(initialValues);
   const [nameError, setNameError] = useState("");
+  const [descriptionError, setDescriptionError] = useState("");
+  const [logoError, setLogoError] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const clearObjectUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -45,25 +58,44 @@ export default function CategoryFormModal({
         ? {
             name: category.name,
             description: category.description ?? "",
+            logo: null,
             isActive: category.isActive,
             sortOrder: category.sortOrder ?? 0,
           }
         : initialValues,
     );
     setNameError("");
+    setDescriptionError("");
+    setLogoError("");
+    clearObjectUrl();
+    setLogoPreview(category?.logo?.url ?? null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }, [category, isOpen]);
+
+  useEffect(() => () => clearObjectUrl(), []);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!values.name.trim()) {
+    const trimmedName = values.name.trim();
+    const trimmedDescription = values.description.trim();
+
+    if (!trimmedName) {
       setNameError("Category name is required");
+    }
+    if (!trimmedDescription) {
+      setDescriptionError("Description is required");
+    }
+    if (!category && !values.logo) {
+      setLogoError("Logo is required");
+    }
+    if (!trimmedName || !trimmedDescription || (!category && !values.logo)) {
       return;
     }
 
     onSubmit({
       ...values,
-      name: values.name.trim(),
-      description: values.description.trim(),
+      name: trimmedName,
+      description: trimmedDescription,
       sortOrder: Number(values.sortOrder),
     });
   };
@@ -99,9 +131,12 @@ export default function CategoryFormModal({
             </button>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="category-name" className="text-sm font-semibold text-gray-700">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+            <div>
+              <label
+                htmlFor="category-name"
+                className="mb-3 block text-sm font-semibold text-gray-700"
+              >
                 Category Name <span className="text-red-500">*</span>
               </label>
               <Input
@@ -116,28 +151,90 @@ export default function CategoryFormModal({
                 aria-invalid={Boolean(nameError)}
                 autoFocus
               />
-              {nameError && <p className="text-xs text-red-600">{nameError}</p>}
+              {nameError && <p className="mt-2 text-xs text-red-600">{nameError}</p>}
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="category-description" className="text-sm font-semibold text-gray-700">
-                Description
+            <div>
+              <label
+                htmlFor="category-description"
+                className="mb-3 block text-sm font-semibold text-gray-700"
+              >
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="category-description"
                 value={values.description}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, description: event.target.value }))
-                }
+                onChange={(event) => {
+                  setValues((current) => ({ ...current, description: event.target.value }));
+                  if (descriptionError) setDescriptionError("");
+                }}
                 placeholder="Write a short description of this category"
                 rows={4}
                 className="w-full resize-none rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#2b3674] focus:ring-2 focus:ring-[#2b3674]/10"
               />
+              {descriptionError && <p className="mt-2 text-xs text-red-600">{descriptionError}</p>}
+            </div>
+
+            <div>
+              <p className="mb-3 text-sm font-semibold text-gray-700">
+                Logo {category ? "(optional)" : <span className="text-red-500">*</span>}
+              </p>
+              <input
+                ref={fileInputRef}
+                id="category-logo"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  clearObjectUrl();
+                  setValues((current) => ({ ...current, logo: file }));
+                  if (file) {
+                    const objectUrl = URL.createObjectURL(file);
+                    objectUrlRef.current = objectUrl;
+                    setLogoPreview(objectUrl);
+                    if (logoError) setLogoError("");
+                  }
+                }}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition file:border-0 file:bg-[#f3f4f6] file:px-3 file:py-2 file:text-sm file:text-gray-700 focus:border-[#2b3674] focus:ring-2 focus:ring-[#2b3674]/10"
+              />
+              {logoPreview && (
+                <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoPreview}
+                    alt="Category logo preview"
+                    className="h-16 w-16 rounded-md border border-gray-200 bg-white object-contain"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-700">
+                      {values.logo?.name ?? "Current logo"}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">Logo preview</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearObjectUrl();
+                      setLogoPreview(null);
+                      setValues((current) => ({ ...current, logo: null }));
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    aria-label="Remove logo preview"
+                    className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {logoError && <p className="mt-2 text-xs text-red-600">{logoError}</p>}
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="category-sort-order" className="text-sm font-semibold text-gray-700">
+              <div>
+                <label
+                  htmlFor="category-sort-order"
+                  className="mb-3 block text-sm font-semibold text-gray-700"
+                >
                   Sort Order
                 </label>
                 <Input

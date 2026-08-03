@@ -16,7 +16,7 @@ import {
   Tags,
   Settings,
   UserRound,
-  Wrench,
+  // Wrench,
   X,
   FileUser,
 } from "lucide-react";
@@ -33,11 +33,11 @@ const navigation = [
     href: "/business-management",
     icon: CreditCard,
   },
-  {
-    name: "Service Management",
-    href: "/service-management",
-    icon: Wrench,
-  },
+  // {
+  //   name: "Service Management",
+  //   href: "/service-management",
+  //   icon: Wrench,
+  // },
   {
     name: "Category Management",
     href: "/category-management",

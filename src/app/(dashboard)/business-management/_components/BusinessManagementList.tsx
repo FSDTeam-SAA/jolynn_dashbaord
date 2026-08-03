@@ -23,6 +23,8 @@ type BusinessUser = {
   lastName?: string;
   email: string;
   username?: string;
+  businessName?: string;
+  category?: string;
   role: string;
   status: string;
   tag?: string;
@@ -38,7 +40,7 @@ type BusinessListResponse = {
 
 export default function BusinessManagementList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [page, setPage] = useState(1);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
     null,
@@ -182,7 +184,7 @@ export default function BusinessManagementList() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             type="text"
-            placeholder="Search business name, owner..."
+            placeholder="Search business name, category and email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-10 border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-gray-300 rounded-lg text-sm bg-white"
@@ -242,7 +244,7 @@ export default function BusinessManagementList() {
 
           {/* Table Body rows */}
           <tbody className="divide-y divide-gray-100 bg-white text-sm">
-            {businesses.map((row) => (
+            {businesses?.map((row) => (
               <tr
                 key={row._id}
                 className="hover:bg-slate-50/50 transition-colors"
@@ -250,16 +252,14 @@ export default function BusinessManagementList() {
                 {/* Business Name Column */}
                 <td className="py-4 pl-6 pr-4 font-semibold">
                   <span className="text-[#3b4cb8] cursor-pointer hover:underline">
-                    {row.username ||
-                      [row.firstName, row.lastName].filter(Boolean).join(" ") ||
-                      row.email}
+                      {row?.businessName || "N/A"}
                   </span>
                 </td>
 
                 {/* Category Badge Column */}
                 <td className="py-4 px-4 text-center">
                   <span className="px-2.5 py-1 text-xs font-medium bg-[#eef2ff] text-[#3b4cb8] rounded-md">
-                    {row.tag || row.role}
+                    {row.category || "N/A"}
                   </span>
                 </td>
 

@@ -57,8 +57,19 @@ export default function ViewCategory({ category, onClose }: ViewCategoryProps) {
           <div className="p-6 sm:p-7">
             <div className="mb-6 flex items-start justify-between gap-4 rounded-xl bg-slate-50 p-4">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2b3674]/10 text-[#2b3674]">
-                  <Tag className="h-5 w-5" />
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#2b3674]/10 bg-[#2b3674]/10 text-[#2b3674]">
+                  <Tag className="h-5 w-5" aria-hidden="true" />
+                  {category.logo?.url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={category.logo.url}
+                      alt={`${category.name} logo`}
+                      className="absolute inset-0 h-full w-full bg-white object-cover"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <h3 className="truncate text-lg font-bold text-gray-800">{category.name}</h3>

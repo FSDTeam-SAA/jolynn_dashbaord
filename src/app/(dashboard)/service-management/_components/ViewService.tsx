@@ -88,7 +88,7 @@ export default function ViewService({
               </div>
             )}
             <Detail label="Service Provider Name" value={service.title} />
-            <Detail label="Business Man" value={ownerName} />
+            <Detail label="Business Owner" value={ownerName} />
             <Detail label="Location" value={location} />
             <Detail label="Email" value={owner?.email || "N/A"} />
             <Detail label="Phone" value={owner?.phoneNumber || "N/A"} />

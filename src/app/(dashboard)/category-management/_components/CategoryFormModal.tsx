@@ -3,7 +3,13 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,7 @@ const initialValues: CategoryPayload = {
   logo: null,
   isActive: true,
   sortOrder: 0,
+  status: "approved",
 };
 
 export default function CategoryFormModal({
@@ -61,6 +68,7 @@ export default function CategoryFormModal({
             logo: null,
             isActive: category.isActive,
             sortOrder: category.sortOrder ?? 0,
+            status: category.status ?? (category.isActive ? "approved" : "pending"),
           }
         : initialValues,
     );
@@ -96,7 +104,7 @@ export default function CategoryFormModal({
       ...values,
       name: trimmedName,
       description: trimmedDescription,
-      sortOrder: Number(values.sortOrder),
+      sortOrder: values.sortOrder ?? 0,
     });
   };
 
@@ -107,10 +115,10 @@ export default function CategoryFormModal({
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-slate-950/35 backdrop-blur-[3px]"
-        className="max-h-[90vh] w-[92%] max-w-[620px] overflow-y-auto gap-0 rounded-2xl border-0 bg-white p-0 shadow-2xl"
+        className="max-h-[90vh] w-[92%] max-w-[720px] gap-0 overflow-y-auto rounded-2xl border-0 bg-white p-0 shadow-2xl"
       >
         <div className="h-2 rounded-t-2xl bg-[#2b3674]" />
-        <div className="p-6 sm:p-7">
+        <div className="p-6 sm:p-8">
           <DialogHeader className="flex flex-row items-start justify-between space-y-0 text-left">
             <div>
               <DialogTitle className="text-xl font-bold text-[#292D73]">{title}</DialogTitle>
@@ -125,17 +133,17 @@ export default function CategoryFormModal({
               onClick={onClose}
               disabled={isSaving}
               aria-label={`Close ${title}`}
-              className="rounded-md p-1.5 text-gray-500 hover:bg-slate-100 disabled:opacity-50"
+              className="cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-slate-100 disabled:opacity-50"
             >
               <X className="h-4 w-4" />
             </button>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label
                 htmlFor="category-name"
-                className="mb-3 block text-sm font-semibold text-gray-700"
+                className="mb-2.5 block text-sm font-semibold text-gray-700"
               >
                 Category Name <span className="text-red-500">*</span>
               </label>
@@ -157,7 +165,7 @@ export default function CategoryFormModal({
             <div>
               <label
                 htmlFor="category-description"
-                className="mb-3 block text-sm font-semibold text-gray-700"
+                className="mb-2.5 block text-sm font-semibold text-gray-700"
               >
                 Description <span className="text-red-500">*</span>
               </label>
@@ -176,7 +184,7 @@ export default function CategoryFormModal({
             </div>
 
             <div>
-              <p className="mb-3 text-sm font-semibold text-gray-700">
+              <p className="mb-2.5 text-sm font-semibold text-gray-700">
                 Logo {category ? "(optional)" : <span className="text-red-500">*</span>}
               </p>
               <input
@@ -195,7 +203,7 @@ export default function CategoryFormModal({
                     if (logoError) setLogoError("");
                   }
                 }}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition file:border-0 file:bg-[#f3f4f6] file:px-3 file:py-2 file:text-sm file:text-gray-700 focus:border-[#2b3674] focus:ring-2 focus:ring-[#2b3674]/10"
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#f3f4f6] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-[#2b3674] focus:ring-2 focus:ring-[#2b3674]/10"
               />
               {logoPreview && (
                 <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -220,7 +228,7 @@ export default function CategoryFormModal({
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
                     aria-label="Remove logo preview"
-                    className="rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
+                    className="cursor-pointer rounded-md border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -229,59 +237,48 @@ export default function CategoryFormModal({
               {logoError && <p className="mt-2 text-xs text-red-600">{logoError}</p>}
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="category-sort-order"
-                  className="mb-3 block text-sm font-semibold text-gray-700"
-                >
-                  Sort Order
-                </label>
-                <Input
-                  id="category-sort-order"
-                  type="number"
-                  value={values.sortOrder}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      sortOrder: Number(event.target.value),
-                    }))
-                  }
-                  className="h-11 border-gray-200 focus-visible:ring-[#2b3674]/20"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <label
-                  htmlFor="category-active"
-                  className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-md border border-gray-200 px-3 text-sm font-medium text-gray-700"
-                >
-                  <Checkbox
-                    id="category-active"
-                    checked={values.isActive}
-                    onCheckedChange={(checked) =>
-                      setValues((current) => ({ ...current, isActive: checked === true }))
-                    }
-                    className="data-[state=checked]:border-[#2b3674] data-[state=checked]:bg-[#2b3674]"
-                  />
-                  Active category
-                </label>
-              </div>
+            <div>
+              <label
+                htmlFor="category-status"
+                className="mb-2.5 block text-sm font-semibold text-gray-700"
+              >
+                Status
+              </label>
+              <Select
+                value={values.status ?? "approved"}
+                onValueChange={(val) => {
+                  const newStatus = val as "approved" | "rejected" | "pending";
+                  setValues((current) => ({
+                    ...current,
+                    status: newStatus,
+                    isActive: newStatus === "approved",
+                  }));
+                }}
+              >
+                <SelectTrigger className="!h-11 w-full cursor-pointer border-gray-200 bg-white text-gray-700 focus:ring-2 focus:ring-[#2b3674]/10">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="approved" className="cursor-pointer">Approved</SelectItem>
+                  <SelectItem value="pending" className="cursor-pointer">Pending</SelectItem>
+                  <SelectItem value="rejected" className="cursor-pointer">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-4">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="h-11 rounded-md border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                className="h-11 cursor-pointer rounded-md border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex h-11 items-center justify-center gap-2 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f] disabled:opacity-60"
+                className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-[#2b3674] text-sm font-semibold text-white hover:bg-[#20285f] disabled:opacity-60"
               >
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSaving ? "Saving..." : category ? "Save Changes" : "Add Category"}

@@ -31,6 +31,7 @@ export type CategoryPayload = {
   logo: File | null;
   isActive: boolean;
   sortOrder: number;
+  status?: "approved" | "rejected" | "pending";
 };
 
 type CategoryListResponse = {
@@ -106,6 +107,24 @@ export default function CategoryManagementList() {
       if (!res.ok || !data?.success) {
         throw new Error(data?.message || `Failed to ${categoryId ? "update" : "add"} category`);
       }
+
+      if (categoryId) {
+        const targetStatus = payload.status || (payload.isActive ? "approved" : "rejected");
+        if (targetStatus === "approved" || targetStatus === "rejected") {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/service-categories/${categoryId}/status`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({ status: targetStatus }),
+            },
+          );
+        }
+      }
+
       return data;
     },
     onSuccess: (data) => {
@@ -156,7 +175,7 @@ export default function CategoryManagementList() {
               setSelectedCategory(null);
               setFormMode("add");
             }}
-            className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#2b3674] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#20285f]"
+            className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-[#2b3674] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#20285f]"
           >
             <Plus className="h-4 w-4" />
             Add Category
@@ -169,16 +188,15 @@ export default function CategoryManagementList() {
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Category Name</th>
                 <th className="px-4 py-3.5 text-center">Description</th>
-                <th className="px-4 py-3.5 text-center">Total Business Man</th>
+                <th className="px-4 py-3.5 text-center">Total</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
-                <th className="px-4 py-3.5 text-center">Active</th>
                 <th className="rounded-tr-xl py-3.5 pl-4 pr-6 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white text-sm">
               {isPending || sessionStatus === "loading" ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500">
+                  <td colSpan={5} className="py-12 text-center text-gray-500">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-[#2b3674]" />
                       Loading categories...
@@ -187,13 +205,13 @@ export default function CategoryManagementList() {
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-red-600">
+                  <td colSpan={5} className="py-12 text-center text-red-600">
                     {error instanceof Error ? error.message : "Unable to load categories"}
                   </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500">
+                  <td colSpan={5} className="py-12 text-center text-gray-500">
                     No service categories found
                   </td>
                 </tr>
@@ -241,13 +259,6 @@ export default function CategoryManagementList() {
                         {category.status || "pending"}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        category.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
-                      }`}>
-                        {category.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
                     <td className="py-4 pl-4 pr-6">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -257,7 +268,7 @@ export default function CategoryManagementList() {
                             setFormMode("edit");
                           }}
                           aria-label={`Edit ${category.name}`}
-                          className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:bg-[#eef2ff]"
+                          className="cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:bg-[#eef2ff]"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -265,7 +276,7 @@ export default function CategoryManagementList() {
                           type="button"
                           onClick={() => setViewCategory(category)}
                           aria-label={`View ${category.name}`}
-                          className="rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:bg-[#eef2ff]"
+                          className="cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] hover:bg-[#eef2ff]"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -273,7 +284,7 @@ export default function CategoryManagementList() {
                           type="button"
                           onClick={() => setCategoryToDelete(category)}
                           aria-label={`Delete ${category.name}`}
-                          className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50"
+                          className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

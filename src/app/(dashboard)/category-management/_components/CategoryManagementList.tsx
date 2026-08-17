@@ -236,9 +236,6 @@ export default function CategoryManagementList() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-[#3b4cb8]">{category.name}</p>
-                          {category.slug && (
-                            <p className="mt-0.5 text-xs text-gray-400">{category.slug}</p>
-                          )}
                         </div>
                       </div>
                     </td>

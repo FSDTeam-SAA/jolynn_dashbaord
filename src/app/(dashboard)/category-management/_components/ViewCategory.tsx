@@ -73,7 +73,6 @@ export default function ViewCategory({ category, onClose }: ViewCategoryProps) {
                 </div>
                 <div className="min-w-0">
                   <h3 className="truncate text-lg font-bold text-gray-800">{category.name}</h3>
-                  <p className="truncate text-xs text-gray-500">{category.slug || "Service category"}</p>
                 </div>
               </div>
               <span

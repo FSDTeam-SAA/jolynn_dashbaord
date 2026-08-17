@@ -15,7 +15,7 @@ import ViewBusiness from "./ViewBusiness";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import DeleteModal from "@/components/deleteModal/DeleteModal";
+import RejectModal from "@/components/rejectModal/RejectModal";
 
 type BusinessUser = {
   _id: string;
@@ -40,12 +40,12 @@ type BusinessListResponse = {
 
 export default function BusinessManagementList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
     null,
   );
-  const [businessToDelete, setBusinessToDelete] = useState<{
+  const [businessToReject, setBusinessToReject] = useState<{
     id: string;
     name: string;
   } | null>(null);
@@ -131,27 +131,35 @@ export default function BusinessManagementList() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ reason }),
         }
       );
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to delete business");
+        const errorMessage = Array.isArray(data?.message)
+          ? data.message[0]
+          : data?.message;
+        throw new Error(errorMessage || "Failed to delete business");
       }
 
       return data;
     },
     onSuccess: (data) => {
       toast.success(data?.message || "Business deleted successfully");
-      setBusinessToDelete(null);
+      setBusinessToReject(null);
       queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["businessUser"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -308,27 +316,13 @@ export default function BusinessManagementList() {
                           : "Approve"}
                       </button>
                     )}
-                    {row.status.toLowerCase() !== "rejected" && (
-                      <button
-                        type="button"
-                        disabled={updateStatusMutation.isPending}
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: row._id,
-                            status: "rejected",
-                          })
-                        }
-                        className="h-7 cursor-pointer px-3 text-xs font-semibold text-white bg-[#dc2626] hover:bg-red-600 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Reject
-                      </button>
-                    )}
                     <button
                       type="button"
                       onClick={() =>
-                        setBusinessToDelete({
+                        setBusinessToReject({
                           id: row._id,
                           name:
+                            row.businessName ||
                             row.username ||
                             [row.firstName, row.lastName]
                               .filter(Boolean)
@@ -338,7 +332,7 @@ export default function BusinessManagementList() {
                       }
                       className="h-7 cursor-pointer rounded-md bg-[#dc2626] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-600"
                     >
-                      Delete
+                      Reject
                     </button>
                     <button
                       type="button"
@@ -392,14 +386,18 @@ export default function BusinessManagementList() {
         />
       )}
 
-      <DeleteModal
-        isOpen={businessToDelete !== null}
-        onClose={() => !deleteMutation.isPending && setBusinessToDelete(null)}
-        onConfirm={() =>
-          businessToDelete && deleteMutation.mutate(businessToDelete.id)
+      <RejectModal
+        isOpen={businessToReject !== null}
+        onClose={() => !rejectMutation.isPending && setBusinessToReject(null)}
+        onConfirm={(reason) =>
+          businessToReject &&
+          rejectMutation.mutate({
+            id: businessToReject.id,
+            reason,
+          })
         }
-        itemName={businessToDelete?.name || "this business"}
-        isDeleting={deleteMutation.isPending}
+        itemName={businessToReject?.name || "this business"}
+        isRejecting={rejectMutation.isPending}
       />
     </>
   );

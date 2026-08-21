@@ -396,7 +396,7 @@ export default function BusinessManagementList() {
             reason,
           })
         }
-        itemName={businessToReject?.name || "this business"}
+        itemName={businessToReject?.name || "this business"} 
         isRejecting={rejectMutation.isPending}
       />
     </>

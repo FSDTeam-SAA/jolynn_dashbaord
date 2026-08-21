@@ -10,6 +10,7 @@ import {
   CreditCard,
   GraduationCap,
   Handshake,
+  History,
   LayoutDashboard,
   LogOut,
   MessageSquareWarning,
@@ -69,10 +70,15 @@ const navigation = [
     href: "/user-management",
     icon: UserRound,
   },
-   {
+  {
     name: "Contact Message",
     href: "/contact-message",
-    icon: FileUser ,
+    icon: FileUser,
+  },
+  {
+    name: "Search History",
+    href: "/search-history",
+    icon: History,
   },
 ];
 

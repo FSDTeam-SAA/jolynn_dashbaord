@@ -51,18 +51,6 @@ interface ViewUserProps {
   userId: string;
 }
 
-const formatDate = (value?: string) => {
-  if (!value) return "N/A";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "N/A"
-    : new Intl.DateTimeFormat("en-US", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }).format(date);
-};
-
 const formatBoolean = (value?: boolean) =>
   typeof value === "boolean" ? (value ? "Yes" : "No") : "N/A";
 
@@ -111,7 +99,7 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="flex max-h-[90vh] w-[92%] max-w-[720px] flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl"
+        className="flex max-h-[90vh] w-[92%] max-w-[850px] flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl"
         overlayClassName="bg-slate-950/35 backdrop-blur-[3px]"
         showCloseButton={false}
         data-user-id={userId}
@@ -130,7 +118,7 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
           </button>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {isPending && (
             <div className="py-12 text-center text-sm text-gray-500">
               Loading user details...
@@ -189,10 +177,6 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                   capitalize
                 />
                 <Detail label="Gender" value={user.gender} capitalize />
-                <Detail
-                  label="Date of Birth"
-                  value={formatDate(user.dateOfBirth)}
-                />
                 <Detail label="Tag" value={user.tag} />
                 <Detail
                   label="Agreement Accepted"
@@ -202,14 +186,8 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
 
               <Section title="Contact & Address">
                 <Detail label="Email" value={user.email} />
-                <Detail label="Phone Number" value={user.phoneNumber} />
-                <Detail label="Country" value={user.country} />
                 <Detail label="City" value={user.city} />
                 <Detail label="State" value={user.state} />
-                <Detail label="Postcode" value={user.postcode} />
-                <div className="sm:col-span-2">
-                  <Detail label="Street Address" value={user.address} />
-                </div>
               </Section>
 
               {isBusinessOwner && (
@@ -222,13 +200,6 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                     isLink
                   />
                   <Detail label="Category" value={user.category} />
-                  <Detail
-                    label="Service Category ID"
-                    value={user.serviceCategoryId}
-                  />
-                  <div className="sm:col-span-2">
-                    <Detail label="Service Area" value={user.serviceArea} />
-                  </div>
                 </Section>
               )}
 
@@ -239,28 +210,6 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                   </div>
                 </Section>
               )}
-
-              <Section title="Account Information">
-                <Detail label="User ID" value={user._id} />
-                <Detail label="Account Status" value={user.status} capitalize />
-                <Detail
-                  label="Email Verified"
-                  value={formatBoolean(user.emailVerified)}
-                />
-                <Detail
-                  label="Verified Forget"
-                  value={formatBoolean(user.verifiedForget)}
-                />
-                <Detail label="Joined Date" value={formatDate(user.createdAt)} />
-                <Detail
-                  label="Last Updated"
-                  value={formatDate(user.updatedAt)}
-                />
-                <Detail
-                  label="Document Version"
-                  value={user.__v === undefined ? "N/A" : String(user.__v)}
-                />
-              </Section>
             </div>
           )}
         </div>

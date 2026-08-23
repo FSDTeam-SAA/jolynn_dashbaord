@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Eye, ImageIcon, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { useDeferredValue, useEffect, useState } from "react";
+import { Eye, ImageIcon, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import Pagination from "@/components/pagination/Pagination";
 import DeleteModal from "@/components/deleteModal/DeleteModal";
 import CategoryFormModal from "./CategoryFormModal";
@@ -43,6 +44,8 @@ type CategoryListResponse = {
 
 export default function CategoryManagementList() {
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearch = useDeferredValue(searchQuery.trim());
   const [formMode, setFormMode] = useState<"add" | "edit" | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [viewCategory, setViewCategory] = useState<Category | null>(null);
@@ -53,11 +56,22 @@ export default function CategoryManagementList() {
   const sessionUser = session?.user as { accessToken?: string; token?: string } | undefined;
   const accessToken = sessionUser?.accessToken ?? sessionUser?.token;
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
   const { data: response, isPending, isError, error } = useQuery<CategoryListResponse>({
-    queryKey: ["service-categories", page],
+    queryKey: ["service-categories", page, deferredSearch],
     queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        page: String(page),
+      });
+      if (deferredSearch) {
+        params.set("searchTerm", deferredSearch);
+      }
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/service-categories?limit=${limit}&page=${page}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/service-categories?${params.toString()}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
       const data = await res.json().catch(() => ({}));
@@ -168,7 +182,17 @@ export default function CategoryManagementList() {
   return (
     <>
       <div className="flex w-full flex-col gap-6 rounded-xl border border-gray-100">
-        <div className="flex justify-end">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search category name, description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 rounded-lg border-gray-200 bg-white pl-9 text-sm focus-visible:ring-0"
+            />
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -235,7 +259,14 @@ export default function CategoryManagementList() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-[#3b4cb8]">{category.name}</p>
+                          <p className="font-semibold text-[#3b4cb8]">
+                            {category.name}
+                            {category.status === "pending" && (
+                              <span className="ml-1.5 text-xs font-normal text-amber-600">
+                                (Other)
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     </td>

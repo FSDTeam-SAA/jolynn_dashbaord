@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, FileText, Tag, X, XCircle } from "lucide-react";
+import { CalendarDays, FileText, Tag, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -72,17 +72,16 @@ export default function ViewCategory({ category, onClose }: ViewCategoryProps) {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="truncate text-lg font-bold text-gray-800">{category.name}</h3>
+                  <h3 className="truncate text-lg font-bold text-gray-800">
+                    {category.name}
+                    {category.status === "pending" && (
+                      <span className="ml-2 text-sm font-normal text-amber-600">
+                        (Other)
+                      </span>
+                    )}
+                  </h3>
                 </div>
               </div>
-              <span
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                  category.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                {category.isActive ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-                {category.isActive ? "Active" : "Inactive"}
-              </span>
             </div>
 
             <div className="space-y-5">

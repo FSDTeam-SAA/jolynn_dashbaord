@@ -77,16 +77,16 @@ function ForgotPasswordForm() {
               htmlFor="email"
               className="text-base font-semibold leading-[100%] text-[#4365D0]"
             >
-              Email Address
+              Email / Username
             </Label>
             <Input
               id="email"
-              type="email"
-              placeholder="Type your email"
+              type="text"
+              placeholder="Type your Email / Username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
               className="w-full rounded-[8px] h-[51px] border-[#DCE3EE] focus:ring-[#168CF8] focus:border-[#168CF8] shadow-[0px_0px_10px_0px_#00000026]"
             />
           </div>

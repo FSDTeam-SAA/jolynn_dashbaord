@@ -4,8 +4,6 @@ import React from "react";
 import {
   X,
   User,
-  Mail,
-  Phone,
   Globe,
   MapPin,
   Building,

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +33,7 @@ const initialValues: CategoryPayload = {
   logo: null,
   isActive: true,
   sortOrder: 0,
+  keywords: [],
   status: "approved",
 };
 
@@ -47,6 +48,8 @@ export default function CategoryFormModal({
   const [nameError, setNameError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
   const [logoError, setLogoError] = useState("");
+  const [keywordsError, setKeywordsError] = useState("");
+  const [keywordsInput, setKeywordsInput] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -68,6 +71,7 @@ export default function CategoryFormModal({
             logo: null,
             isActive: category.isActive,
             sortOrder: category.sortOrder ?? 0,
+            keywords: category.keywords ?? [],
             status: category.status ?? (category.isActive ? "approved" : "pending"),
           }
         : initialValues,
@@ -75,12 +79,45 @@ export default function CategoryFormModal({
     setNameError("");
     setDescriptionError("");
     setLogoError("");
+    setKeywordsError("");
+    setKeywordsInput("");
     clearObjectUrl();
     setLogoPreview(category?.logo?.url ?? null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [category, isOpen]);
 
   useEffect(() => () => clearObjectUrl(), []);
+
+  const addKeyword = (keyword: string) => {
+    const trimmedKeyword = keyword.trim();
+    if (!trimmedKeyword) return;
+
+    setValues((current) => {
+      const alreadyAdded = current.keywords.some(
+        (item) => item.toLocaleLowerCase() === trimmedKeyword.toLocaleLowerCase(),
+      );
+      return alreadyAdded
+        ? current
+        : { ...current, keywords: [...current.keywords, trimmedKeyword] };
+    });
+    if (keywordsError) setKeywordsError("");
+    setKeywordsInput("");
+  };
+
+  const handleKeywordKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addKeyword(keywordsInput);
+      return;
+    }
+
+    if (event.key === "Backspace" && !keywordsInput && values.keywords.length) {
+      setValues((current) => ({
+        ...current,
+        keywords: current.keywords.slice(0, -1),
+      }));
+    }
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -100,10 +137,26 @@ export default function CategoryFormModal({
       return;
     }
 
+    const pendingKeyword = keywordsInput.trim();
+    const keywords = pendingKeyword
+      ? values.keywords.some((keyword) => keyword.toLocaleLowerCase() === pendingKeyword.toLocaleLowerCase())
+        ? values.keywords
+        : [...values.keywords, pendingKeyword]
+      : values.keywords;
+
+    if (keywords.length < 3) {
+      setKeywordsError("At least 3 keywords are required");
+    }
+
+    if (keywords.length < 3) {
+      return;
+    }
+
     onSubmit({
       ...values,
       name: trimmedName,
       description: trimmedDescription,
+      keywords,
       sortOrder: values.sortOrder ?? 0,
     });
   };
@@ -139,11 +192,11 @@ export default function CategoryFormModal({
             </button>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-2">
             <div>
               <label
                 htmlFor="category-name"
-                className="mb-2.5 block text-sm font-semibold text-gray-700"
+                className="mb-2 block text-sm font-semibold text-gray-700"
               >
                 Category Name <span className="text-red-500">*</span>
               </label>
@@ -177,10 +230,76 @@ export default function CategoryFormModal({
                   if (descriptionError) setDescriptionError("");
                 }}
                 placeholder="Write a short description of this category"
-                rows={4}
+                rows={3}
                 className="w-full resize-none rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#2b3674] focus:ring-2 focus:ring-[#2b3674]/10"
               />
               {descriptionError && <p className="mt-2 text-xs text-red-600">{descriptionError}</p>}
+            </div>
+
+            <div>
+              <label
+                htmlFor="category-keywords"
+                className="mb-2.5 block text-sm font-semibold text-gray-700"
+              >
+                Keywords
+              </label>
+              <div
+                className={`rounded-md border bg-white transition focus-within:ring-2 ${
+                  keywordsError
+                    ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-100"
+                    : "border-gray-200 focus-within:border-[#2b3674] focus-within:ring-[#2b3674]/10"
+                }`}
+              >
+                {values.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-2 px-3 pt-3">
+                    {values.keywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="flex items-center gap-1 rounded-full bg-[#eef0ff] px-2.5 py-1 text-xs font-medium text-[#2b3674]"
+                      >
+                        {keyword}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValues((current) => ({
+                              ...current,
+                              keywords: current.keywords.filter((item) => item !== keyword),
+                            }));
+                            if (keywordsError) setKeywordsError("");
+                          }}
+                          aria-label={`Remove ${keyword}`}
+                          className="cursor-pointer rounded-full p-0.5 hover:bg-[#dce1ff]"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 p-2">
+                  <input
+                    id="category-keywords"
+                    value={keywordsInput}
+                    onChange={(event) => {
+                      setKeywordsInput(event.target.value);
+                      if (keywordsError) setKeywordsError("");
+                    }}
+                    onKeyDown={handleKeywordKeyDown}
+                    placeholder={values.keywords.length ? "Add another keyword" : "Type a keyword"}
+                    className="min-w-0 flex-1 bg-transparent px-1 text-sm text-gray-700 outline-none placeholder:text-gray-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addKeyword(keywordsInput)}
+                    disabled={!keywordsInput.trim()}
+                    className="shrink-0 cursor-pointer rounded-md bg-[#2b3674] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#20285f] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">Press Enter or comma to add a keyword.</p>
+              {keywordsError && <p className="mt-2 text-xs text-red-600">{keywordsError}</p>}
             </div>
 
             <div>

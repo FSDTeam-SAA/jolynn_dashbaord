@@ -21,6 +21,7 @@ export type Category = {
   source?: "admin" | "help_wanted" | "business_registration" | "service_creation";
   isActive: boolean;
   sortOrder?: number;
+  keywords?: string[];
   businessOwnerCount?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -32,6 +33,7 @@ export type CategoryPayload = {
   logo: File | null;
   isActive: boolean;
   sortOrder: number;
+  keywords: string[];
   status?: "approved" | "rejected" | "pending";
 };
 
@@ -103,6 +105,7 @@ export default function CategoryManagementList() {
       formData.append("description", payload.description.trim());
       formData.append("isActive", String(payload.isActive));
       formData.append("sortOrder", String(payload.sortOrder));
+      formData.append("keywords", JSON.stringify(payload.keywords));
       if (payload.logo) {
         formData.append("logo", payload.logo);
       }

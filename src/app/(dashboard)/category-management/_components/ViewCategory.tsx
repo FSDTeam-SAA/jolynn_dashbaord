@@ -92,6 +92,24 @@ export default function ViewCategory({ category, onClose }: ViewCategoryProps) {
                 </p>
               </div>
 
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Keywords</p>
+                {category.keywords?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {category.keywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="rounded-full bg-[#eef0ff] px-2.5 py-1 text-xs font-medium text-[#2b3674]"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No keywords have been added for this category.</p>
+                )}
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <Detail icon={<FileText className="h-4 w-4" />} label="Posts Count" value={String(category.businessOwnerCount ?? 0)} />
                 <Detail icon={<Tag className="h-4 w-4" />} label="Status" value={category.status || "N/A"} capitalize />

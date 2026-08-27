@@ -60,6 +60,7 @@ export default function ViewReport({ isOpen, onClose, reportId, reportType }: Vi
       {report && <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-3">
         <Detail label="Username" value={username || "N/A"} /><Detail label="Contact" value={contact || "N/A"} /><Detail label="Email" value={email || "N/A"} />
         {isJobReport ? <><Detail label="Category" value={report.helpWantedId?.category || "N/A"} /><Detail label="Zipcode" value={report.helpWantedId?.zipcode || "N/A"} /></> : <><Detail label="Business Owner" value={businessName || "N/A"} /><Detail label="Business Email" value={businessOwner?.email || "N/A"} /><Detail label="Services" value={services || "N/A"} /></>}
+        {isJobReport && <div className="space-y-1.5 sm:col-span-3"><h3 className="text-sm font-semibold text-gray-700">Job Message</h3><p className="text-sm leading-6 text-gray-500">{report.helpWantedId?.message || "N/A"}</p></div>}
         <div className="space-y-1.5 sm:col-span-3"><h3 className="text-sm font-semibold text-gray-700">Report</h3><p className="text-sm leading-6 text-gray-500">{report.message}</p></div>
       </div>}
     </DialogContent>

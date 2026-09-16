@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "@/lib/format-date";
+
 import { useDeferredValue, useEffect, useState } from "react";
 import { Eye, ImageIcon, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -216,6 +218,7 @@ export default function CategoryManagementList() {
                 <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Category Name</th>
                 <th className="px-4 py-3.5 text-center">Description</th>
                 <th className="px-4 py-3.5 text-center">Total</th>
+                <th className="px-4 py-3.5 text-center">Created Date</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="rounded-tr-xl py-3.5 pl-4 pr-6 text-center">Action</th>
               </tr>
@@ -223,7 +226,7 @@ export default function CategoryManagementList() {
             <tbody className="divide-y divide-gray-100 bg-white text-sm">
               {isPending || sessionStatus === "loading" ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
+                  <td colSpan={6} className="py-12 text-center text-gray-500">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-[#2b3674]" />
                       Loading categories...
@@ -232,13 +235,13 @@ export default function CategoryManagementList() {
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-red-600">
+                  <td colSpan={6} className="py-12 text-center text-red-600">
                     {error instanceof Error ? error.message : "Unable to load categories"}
                   </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
+                  <td colSpan={6} className="py-12 text-center text-gray-500">
                     No service categories found
                   </td>
                 </tr>
@@ -278,6 +281,9 @@ export default function CategoryManagementList() {
                     </td>
                     <td className="px-4 py-4 text-center font-medium text-gray-600">
                       {category.businessOwnerCount ?? 0}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-gray-700">
+                      {formatDate(category.createdAt)}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${

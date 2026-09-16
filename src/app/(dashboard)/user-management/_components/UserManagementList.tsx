@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "@/lib/format-date";
+
 import React, { useDeferredValue, useEffect, useState } from "react";
 import { Eye, Mail, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,7 @@ export type ManagedUser = {
   email: string;
   username?: string;
   role: string;
+  roles?: string[];
   gender?: string;
   phoneNumber?: string;
   status: string;
@@ -174,8 +177,8 @@ export default function UserManagementList() {
               <tr className="bg-[#2b3674] text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="rounded-tl-xl py-3.5 pl-6 pr-4">Username</th>
                 <th className="px-4 py-3.5 text-center">Email</th>
-                <th className="px-4 py-3.5 text-center">Contact</th>
                 <th className="px-4 py-3.5 text-center">Role</th>
+                <th className="px-4 py-3.5 text-center">Created Date</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="rounded-tr-xl py-3.5 pr-6 text-end">Action</th>
               </tr>
@@ -212,13 +215,15 @@ export default function UserManagementList() {
                     <td className="px-4 py-4 text-center text-gray-700">
                       {user.email}
                     </td>
-                    <td className="px-4 py-4 text-center font-medium text-gray-700">
-                      {user.phoneNumber || "N/A"}
-                    </td>
                     <td className="px-4 py-4 text-center capitalize text-gray-700">
-                      {user.role === "businessOwner"
-                        ? "Business Owner"
-                        : user.role}
+                      {(user.roles?.length ? user.roles : [user.role])
+                        .map((role) =>
+                          role === "businessOwner" ? "Business Owner" : role,
+                        )
+                        .join(" + ")}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-gray-700">
+                      {formatDate(user.createdAt)}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span

@@ -19,7 +19,7 @@ type UserDetails = {
   email: string;
   username?: string;
   role: string;
-  gender?: string;
+  roles?: string[];
   phoneNumber?: string;
   profilePicture?: string;
   dateOfBirth?: string;
@@ -89,6 +89,15 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
     user?.email ||
     "User";
   const isBusinessOwner = user?.role === "businessOwner";
+  const displayedRoles = (
+    user?.roles?.length ? user.roles : user?.role ? [user.role] : []
+  )
+    .map((role) =>
+      role === "businessOwner"
+        ? "Business Owner"
+        : role.charAt(0).toUpperCase() + role.slice(1),
+    )
+    .join(" + ");
   const statusStyles =
     user?.status === "active"
       ? "border-[#22c55e] bg-[#f0fdf4] text-[#22c55e]"
@@ -171,12 +180,9 @@ export default function ViewUser({ isOpen, onClose, userId }: ViewUserProps) {
                 <Detail label="Username" value={user.username} />
                 <Detail
                   label="Role"
-                  value={
-                    isBusinessOwner ? "Business Owner" : user.role
-                  }
+                  value={displayedRoles}
                   capitalize
                 />
-                <Detail label="Gender" value={user.gender} capitalize />
                 <Detail label="Tag" value={user.tag} />
                 <Detail
                   label="Agreement Accepted"

@@ -44,11 +44,9 @@ export default function NewActionsAndRegistration() {
         },
       );
       const data = await response.json();
-
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Failed to fetch latest businesses");
       }
-
       return data;
     },
     enabled: Boolean(accessToken),
@@ -96,7 +94,7 @@ export default function NewActionsAndRegistration() {
               </div>
             ))}
             {latestBusinesses.length === 0 && (
-              <div className="py-4 text-sm font-medium text-gray-500">
+              <div className="py-4 text-sm font-medium  text-gray-500">
                 No businesses found
               </div>
             )}

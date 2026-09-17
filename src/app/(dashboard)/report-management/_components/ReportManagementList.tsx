@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Ban, Eye, Loader2, Mail, Trash2 } from "lucide-react";
+import { Eye, Loader2, Mail, Trash2 } from "lucide-react";
 import Pagination from "@/components/pagination/Pagination";
 import ViewReport from "./ViewReport";
 import DeleteModal from "@/components/deleteModal/DeleteModal";
@@ -296,7 +296,7 @@ export default function ReportManagementList() {
                             <Mail className="h-4 w-4" />
                           </a>
                         )}
-                        <button
+                        {/* <button
                           type="button"
                           disabled={
                             !item.suspendUserId || suspendMutation.isPending
@@ -312,7 +312,7 @@ export default function ReportManagementList() {
                         >
                           <Ban className="h-3.5 w-3.5" />
                           Suspend
-                        </button>
+                        </button> */}
                         <button
                           type="button"
                           disabled={deleteMutation.isPending}

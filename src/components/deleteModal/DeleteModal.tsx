@@ -18,6 +18,7 @@ type DeleteModalProps = {
   onConfirm: () => void;
   itemName: string;
   isDeleting?: boolean;
+  description?: string;
 };
 
 function DeleteModal({
@@ -26,6 +27,7 @@ function DeleteModal({
   onConfirm,
   itemName,
   isDeleting = false,
+  description,
 }: DeleteModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -46,6 +48,7 @@ function DeleteModal({
             <DialogDescription className="pt-2 text-sm leading-6 text-gray-500">
               Are you sure you want to delete <strong>{itemName}</strong>? This
               action cannot be undone.
+              {description && <span className="mt-2 block">{description}</span>}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-2">

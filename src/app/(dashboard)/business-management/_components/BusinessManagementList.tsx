@@ -147,7 +147,7 @@ export default function BusinessManagementList() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ reason }),
+          body: JSON.stringify({ reason, profileRole: "businessOwner" }),
         }
       );
       const data = await response.json().catch(() => ({}));

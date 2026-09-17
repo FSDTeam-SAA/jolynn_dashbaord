@@ -109,13 +109,30 @@ export default function UserManagementList() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const getDeleteProfileRole = (user: ManagedUser) => {
+    const roles = user.roles?.length ? user.roles : [user.role];
+    if ((roleFilter === "user" || roleFilter === "businessOwner") && roles.includes(roleFilter)) {
+      return roleFilter;
+    }
+    if ((user.role === "user" || user.role === "businessOwner") && roles.includes(user.role)) {
+      return user.role;
+    }
+    return roles.find((role) => role === "user" || role === "businessOwner");
+  };
+
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (user: ManagedUser) => {
+      const profileRole = getDeleteProfileRole(user);
+      if (!profileRole) throw new Error("This account has no deletable personal or business profile.");
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${user._id}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ profileRole }),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -263,7 +280,7 @@ export default function UserManagementList() {
                         </a>
                         <button
                           onClick={() => setUserToDelete(user)}
-                          disabled={deleteMutation.isPending}
+                          disabled={deleteMutation.isPending || !getDeleteProfileRole(user)}
                           aria-label={`Delete ${displayName}`}
                           className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -308,8 +325,9 @@ export default function UserManagementList() {
           !deleteMutation.isPending && setUserToDelete(null)
         }
         onConfirm={() =>
-          userToDelete && deleteMutation.mutate(userToDelete._id)
+          userToDelete && deleteMutation.mutate(userToDelete)
         }
+        description={userToDelete ? `This will delete the ${getDeleteProfileRole(userToDelete) === "businessOwner" ? "business" : "personal"} profile and its related data. Any other profile will remain. If this is the last profile, the account will also be deleted.` : undefined}
         itemName={
           userToDelete?.username ||
           [userToDelete?.firstName, userToDelete?.lastName]

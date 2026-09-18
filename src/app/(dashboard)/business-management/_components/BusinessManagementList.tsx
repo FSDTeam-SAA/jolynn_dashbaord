@@ -142,12 +142,12 @@ export default function BusinessManagementList() {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
         {
-          method: "DELETE",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ reason, profileRole: "businessOwner" }),
+          body: JSON.stringify({ status: "rejected", reason }),
         }
       );
       const data = await response.json().catch(() => ({}));
@@ -156,14 +156,16 @@ export default function BusinessManagementList() {
         const errorMessage = Array.isArray(data?.message)
           ? data.message[0]
           : data?.message;
-        throw new Error(errorMessage || "Failed to delete business");
+        throw new Error(errorMessage || "Failed to reject business");
       }
 
       return data;
     },
     onSuccess: (data) => {
-      toast.success(data?.message || "Business deleted successfully");
+      toast.success(data?.message || "Business rejected successfully");
       setBusinessToReject(null);
+      queryClient.invalidateQueries({ queryKey: ["managedUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["managedUser"] });
       queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
       queryClient.invalidateQueries({ queryKey: ["businessUser"] });
     },
@@ -402,6 +404,7 @@ export default function BusinessManagementList() {
         onClose={() => !rejectMutation.isPending && setBusinessToReject(null)}
         onConfirm={(reason) =>
           businessToReject &&
+          !rejectMutation.isPending &&
           rejectMutation.mutate({
             id: businessToReject.id,
             reason,

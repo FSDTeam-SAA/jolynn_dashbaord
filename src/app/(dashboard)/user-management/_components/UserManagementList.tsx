@@ -111,13 +111,9 @@ export default function UserManagementList() {
 
   const getDeleteProfileRole = (user: ManagedUser) => {
     const roles = user.roles?.length ? user.roles : [user.role];
-    if ((roleFilter === "user" || roleFilter === "businessOwner") && roles.includes(roleFilter)) {
-      return roleFilter;
-    }
-    if ((user.role === "user" || user.role === "businessOwner") && roles.includes(user.role)) {
-      return user.role;
-    }
-    return roles.find((role) => role === "user" || role === "businessOwner");
+    if (roles.includes("businessOwner")) return "businessOwner";
+    if (roles.includes("user")) return "user";
+    return undefined;
   };
 
   const deleteMutation = useMutation({
@@ -140,10 +136,17 @@ export default function UserManagementList() {
         throw new Error(data?.message || "Failed to delete user");
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, deletedUser) => {
       toast.success(data?.message || "User deleted successfully");
       setUserToDelete(null);
-      if (users.length === 1 && page > 1) setPage((current) => current - 1);
+      const roles = deletedUser.roles?.length ? deletedUser.roles : [deletedUser.role];
+      const remainsInList = roles.some(
+        (role) => role !== getDeleteProfileRole(deletedUser) && (roleFilter === "all" || roleFilter === role),
+      );
+      if (!remainsInList && users.length === 1 && page > 1) setPage((current) => current - 1);
+      setSelectedUserId(null);
+      queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["businessUser"] });
       queryClient.invalidateQueries({ queryKey: ["managedUsers"] });
       queryClient.invalidateQueries({ queryKey: ["managedUser"] });
     },
@@ -320,14 +323,15 @@ export default function UserManagementList() {
         />
       )}
       <DeleteModal
+        confirmLabel="Confirm"
         isOpen={Boolean(userToDelete)}
         onClose={() =>
           !deleteMutation.isPending && setUserToDelete(null)
         }
         onConfirm={() =>
-          userToDelete && deleteMutation.mutate(userToDelete)
+          userToDelete && !deleteMutation.isPending && deleteMutation.mutate(userToDelete)
         }
-        description={userToDelete ? `This will delete the ${getDeleteProfileRole(userToDelete) === "businessOwner" ? "business" : "personal"} profile and its related data. Any other profile will remain. If this is the last profile, the account will also be deleted.` : undefined}
+        description={userToDelete ? `This will delete the ${getDeleteProfileRole(userToDelete) === "businessOwner" ? "business" : "personal"} profile and its related data. If both profiles exist, the business profile is deleted first and the personal profile remains. You can delete the personal profile separately afterward. If this is the last profile, the account will also be deleted.` : undefined}
         itemName={
           userToDelete?.username ||
           [userToDelete?.firstName, userToDelete?.lastName]

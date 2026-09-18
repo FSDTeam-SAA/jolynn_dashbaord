@@ -19,6 +19,7 @@ type DeleteModalProps = {
   itemName: string;
   isDeleting?: boolean;
   description?: string;
+  confirmLabel?: string;
 };
 
 function DeleteModal({
@@ -28,6 +29,7 @@ function DeleteModal({
   itemName,
   isDeleting = false,
   description,
+  confirmLabel = "Delete",
 }: DeleteModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -67,7 +69,7 @@ function DeleteModal({
               onClick={onConfirm}
               className="h-10 cursor-pointer bg-[#dc2626] text-white hover:bg-red-700"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting..." : confirmLabel}
             </Button>
           </DialogFooter>
         </div>

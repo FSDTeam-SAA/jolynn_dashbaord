@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import RejectModal from "@/components/rejectModal/RejectModal";
+import AddReferralBusinessDialog from "./AddReferralBusinessDialog";
 
 type BusinessUser = {
   _id: string;
@@ -208,38 +209,26 @@ export default function BusinessManagementList() {
         </div>
 
         {/* Right Side Status Dropdown */}
-        <div className="w-full sm:w-[150px]">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-10  !w-full text-sm font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-lg border-gray-100 shadow-lg">
-              <SelectItem
-                value="all"
-                className="text-sm cursor-pointer text-gray-600"
-              >
-                Status
-              </SelectItem>
-              <SelectItem
-                value="active"
-                className="text-sm cursor-pointer text-gray-600"
-              >
-                Active
-              </SelectItem>
-              <SelectItem
-                value="pending"
-                className="text-sm cursor-pointer text-gray-600"
-              >
-                Pending
-              </SelectItem>
-              <SelectItem
-                value="rejected"
-                className="text-sm cursor-pointer text-gray-600"
-              >
-                Rejected
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="min-w-0 flex-1 sm:w-[150px] sm:flex-none">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-10 !w-full text-sm font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border-gray-100 shadow-lg">
+                <SelectItem value="all" className="text-sm cursor-pointer text-gray-600">Status</SelectItem>
+                <SelectItem value="active" className="text-sm cursor-pointer text-gray-600">Active</SelectItem>
+                <SelectItem value="pending" className="text-sm cursor-pointer text-gray-600">Pending</SelectItem>
+                <SelectItem value="rejected" className="text-sm cursor-pointer text-gray-600">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <AddReferralBusinessDialog
+            token={accessToken}
+            onCreated={() => {
+              void queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+            }}
+          />
         </div>
       </div>
 

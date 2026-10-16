@@ -7,19 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Building2, ImagePlus, Plus, Star, X } from "lucide-react";
+import { Building2, ChevronDown, ImagePlus, Plus, Search, Star, X } from "lucide-react";
 import Image from "next/image";
 import {
   ChangeEvent,
   FormEvent,
+  useId,
   useEffect,
   useRef,
   useState,
@@ -42,6 +36,101 @@ const inputClass =
   "mt-2 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2.5 text-sm text-[#344054] outline-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15";
 
 const getApiUrl = () => process.env.NEXT_PUBLIC_BACKEND_API_URL?.replace(/\/$/, "");
+
+type SearchableOption = {
+  value: string;
+  label: string;
+};
+
+type SearchableSelectProps = {
+  value: string;
+  options: SearchableOption[];
+  placeholder: string;
+  searchLabel: string;
+  disabled?: boolean;
+  onValueChange: (value: string) => void;
+};
+
+function SearchableSelect({
+  value,
+  options,
+  placeholder,
+  searchLabel,
+  disabled = false,
+  onValueChange,
+}: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const id = useId();
+  const selectedLabel = options.find((option) => option.value === value)?.label;
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const filteredOptions = normalizedSearchTerm
+    ? options.filter((option) => option.label.toLocaleLowerCase().includes(normalizedSearchTerm))
+    : options;
+
+  return (
+    <div className="relative mt-2">
+      <button
+        id={id}
+        type="button"
+        role="combobox"
+        aria-controls={isOpen ? `${id}-options` : undefined}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => {
+          if (current) setSearchTerm("");
+          return !current;
+        })}
+        className="flex h-10 w-full items-center justify-between rounded-lg border border-[#D0D5DD] bg-white px-3 text-left text-sm font-normal text-[#344054] shadow-none outline-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15 disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#98A2B3]"
+      >
+        <span className={selectedLabel ? "truncate" : "truncate text-[#98A2B3]"}>{selectedLabel || placeholder}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[#667085] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen && !disabled && (
+        <div className="absolute z-[100] mt-1 w-full rounded-lg border border-[#D0D5DD] bg-white p-1 shadow-[0_12px_24px_rgba(16,24,40,0.16)]">
+          <div className="relative border-b border-[#EAECF0] p-1 pb-2">
+            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[#667085]" aria-hidden="true" />
+            <input
+              autoFocus
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setIsOpen(false);
+                  setSearchTerm("");
+                }
+              }}
+              placeholder={`Search ${searchLabel.toLocaleLowerCase()}...`}
+              aria-label={`Search ${searchLabel.toLocaleLowerCase()}`}
+              className="w-full rounded-md border border-[#D0D5DD] py-2 pl-8 pr-3 text-sm font-normal text-[#344054] outline-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15"
+            />
+          </div>
+          <div id={`${id}-options`} role="listbox" aria-labelledby={id} className="max-h-48 overflow-y-auto pt-1">
+            {filteredOptions.length ? filteredOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={value === option.value}
+                onClick={() => {
+                  onValueChange(option.value);
+                  setIsOpen(false);
+                  setSearchTerm("");
+                }}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${value === option.value ? "bg-[#EEF1FF] font-semibold text-[#292D73]" : "text-[#344054] hover:bg-[#F8FAFC]"}`}
+              >
+                {option.label}
+              </button>
+            )) : (
+              <p className="px-3 py-3 text-sm font-normal text-[#667085]">No matching {searchLabel.toLocaleLowerCase()} found.</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AddReferralBusinessDialog({
   token,
@@ -180,11 +269,7 @@ export default function AddReferralBusinessDialog({
     if (businessName.length < 2) return setFormMessage("Please enter a business name.");
     if (!categoryId) return setFormMessage("Please select a category.");
     if (!stateName || !city) return setFormMessage("Please select the business state and city.");
-    if (!(image instanceof File) || !image.size) return setFormMessage("Please upload a business image.");
     if (!businessEmail) return setFormMessage("Please enter the business email address.");
-    if (!rating || review.length < 10) {
-      return setFormMessage("Please select a rating and write a review of at least 10 characters.");
-    }
 
     const body = new FormData();
     body.append("businessName", businessName);
@@ -193,9 +278,9 @@ export default function AddReferralBusinessDialog({
     body.append("city", city);
     body.append("businessEmail", businessEmail.toLowerCase());
     if (businessPhone) body.append("businessPhone", businessPhone);
-    body.append("rating", String(rating));
-    body.append("review", review);
-    body.append("image", image);
+    if (rating) body.append("rating", String(rating));
+    if (review) body.append("review", review);
+    if (image instanceof File && image.size) body.append("image", image);
 
     createReferral.mutate(body, {
       onSuccess: () => {
@@ -260,36 +345,36 @@ export default function AddReferralBusinessDialog({
             </label>
             <label className="text-xs font-semibold text-[#344054]">
               Category *
-              <Select value={categoryId} onValueChange={setCategoryId} disabled={categoriesQuery.isLoading || categoriesQuery.isError}>
-                <SelectTrigger className="mt-2 !h-10 w-full rounded-lg border-[#D0D5DD] bg-white text-sm text-[#344054] shadow-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15">
-                  <SelectValue placeholder={categoriesQuery.isLoading ? "Loading categories..." : "Select a category"} />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start" className="z-[100] max-h-64 overflow-y-auto border-[#D0D5DD] bg-white">
-                  {categories.map((category) => <SelectItem key={category._id} value={category._id}>{category.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={categoryId}
+                onValueChange={setCategoryId}
+                options={categories.map((category) => ({ value: category._id, label: category.name }))}
+                placeholder={categoriesQuery.isLoading ? "Loading categories..." : "Select a category"}
+                searchLabel="categories"
+                disabled={categoriesQuery.isLoading || categoriesQuery.isError}
+              />
             </label>
             <label className="text-xs font-semibold text-[#344054]">
               State *
-              <Select value={stateName} onValueChange={(value) => { setStateName(value); setCity(""); }} disabled={statesQuery.isLoading || statesQuery.isError}>
-                <SelectTrigger className="mt-2 !h-10 w-full rounded-lg border-[#D0D5DD] bg-white text-sm text-[#344054] shadow-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15">
-                  <SelectValue placeholder={statesQuery.isLoading ? "Loading states..." : "Select a state"} />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start" className="z-[100] max-h-64 overflow-y-auto border-[#D0D5DD] bg-white">
-                  {(statesQuery.data?.data ?? []).map((state) => <SelectItem key={state.mongoId} value={state.name}>{state.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={stateName}
+                onValueChange={(value) => { setStateName(value); setCity(""); }}
+                options={(statesQuery.data?.data ?? []).map((state) => ({ value: state.name, label: state.name }))}
+                placeholder={statesQuery.isLoading ? "Loading states..." : "Select a state"}
+                searchLabel="states"
+                disabled={statesQuery.isLoading || statesQuery.isError}
+              />
             </label>
             <label className="text-xs font-semibold text-[#344054]">
               City *
-              <Select value={city} onValueChange={setCity} disabled={!selectedState || citiesQuery.isLoading || citiesQuery.isError}>
-                <SelectTrigger className="mt-2 !h-10 w-full rounded-lg border-[#D0D5DD] bg-white text-sm text-[#344054] shadow-none focus:border-[#292D73] focus:ring-2 focus:ring-[#292D73]/15">
-                  <SelectValue placeholder={!selectedState ? "Select a state first" : citiesQuery.isLoading ? "Loading cities..." : "Select a city"} />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start" className="z-[100] max-h-64 overflow-y-auto border-[#D0D5DD] bg-white">
-                  {cities.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={city}
+                onValueChange={setCity}
+                options={cities.map((item) => ({ value: item, label: item }))}
+                placeholder={!selectedState ? "Select a state first" : citiesQuery.isLoading ? "Loading cities..." : "Select a city"}
+                searchLabel="cities"
+                disabled={!selectedState || citiesQuery.isLoading || citiesQuery.isError}
+              />
             </label>
             <label className="text-xs font-semibold text-[#344054]">
               Business email *
@@ -300,11 +385,11 @@ export default function AddReferralBusinessDialog({
               <input name="businessPhone" type="tel" maxLength={30} placeholder="Enter phone number" className={inputClass} />
             </label>
             <label className="text-xs font-semibold text-[#344054] sm:col-span-2 lg:col-span-1">
-              Business image *
+              Business image (optional)
               <span className="mt-2 flex min-h-[42px] items-center gap-2 rounded-lg border border-dashed border-[#A8B2D1] bg-[#F8FAFF] px-3 py-2 text-sm font-normal text-[#475467]">
                 <ImagePlus className="h-4 w-4 shrink-0 text-[#292D73]" />
                 <span className="min-w-0 flex-1 truncate">{imagePreview ? "Image selected" : "Upload an image"}</span>
-                <input ref={imageInput} name="image" type="file" accept="image/*" required className="w-[115px] text-xs file:mr-2 file:rounded-md file:border-0 file:bg-[#E6E9FA] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#292D73]" onChange={handleImageChange} />
+                <input ref={imageInput} name="image" type="file" accept="image/*" className="w-[115px] text-xs file:mr-2 file:rounded-md file:border-0 file:bg-[#E6E9FA] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#292D73]" onChange={handleImageChange} />
               </span>
               <span className="mt-1 block text-[11px] font-normal text-[#667085]">Maximum file size: 5 MB.</span>
             </label>
@@ -319,7 +404,7 @@ export default function AddReferralBusinessDialog({
 
           <p className="text-xs text-[#667085]">The business email is required so we can send its secure claim link. Phone is optional.</p>
           <fieldset>
-            <legend className="text-xs font-semibold text-[#344054]">Your rating *</legend>
+            <legend className="text-xs font-semibold text-[#344054]">Your rating (optional)</legend>
             <div className="mt-2 flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button key={value} type="button" onClick={() => setRating(value)} className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#292D73]" aria-label={`${value} ${value === 1 ? "star" : "stars"}`}>
@@ -330,8 +415,8 @@ export default function AddReferralBusinessDialog({
             </div>
           </fieldset>
           <label className="block text-xs font-semibold text-[#344054]">
-            Your review *
-            <textarea name="review" required minLength={10} maxLength={1500} rows={4} placeholder="Tell us about your experience with this business..." className={`${inputClass} resize-y`} />
+            Your review (optional)
+            <textarea name="review" minLength={10} maxLength={1500} rows={4} placeholder="Tell us about your experience with this business..." className={`${inputClass} resize-y`} />
           </label>
 
           {formMessage && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{formMessage}</p>}

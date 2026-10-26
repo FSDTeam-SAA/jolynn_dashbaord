@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Building2, ChevronDown, ImagePlus, Plus, Search, Star, X } from "lucide-react";
+import { ChevronDown, ImagePlus, Plus, Search, Star, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import {
   ChangeEvent,
@@ -25,6 +25,10 @@ type LocationState = {
   mongoId: string;
   name: string;
   countryName?: string;
+};
+type SelectedImage = {
+  file: File;
+  previewUrl: string;
 };
 
 type AddReferralBusinessDialogProps = {
@@ -141,9 +145,11 @@ export default function AddReferralBusinessDialog({
   const [stateName, setStateName] = useState("");
   const [city, setCity] = useState("");
   const [rating, setRating] = useState(0);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [formMessage, setFormMessage] = useState("");
   const imageInput = useRef<HTMLInputElement>(null);
+  const selectedImagesRef = useRef<SelectedImage[]>([]);
+  const imageInputId = useId();
   const apiUrl = getApiUrl();
 
   const categoriesQuery = useQuery<{ data: Category[] }>({
@@ -215,12 +221,20 @@ export default function AddReferralBusinessDialog({
     },
   });
 
-  useEffect(
-    () => () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-    },
-    [imagePreview],
-  );
+  useEffect(() => () => {
+    selectedImagesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+  }, []);
+
+  const updateSelectedImages = (images: SelectedImage[]) => {
+    selectedImagesRef.current = images;
+    setSelectedImages(images);
+  };
+
+  const clearImages = () => {
+    selectedImagesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+    updateSelectedImages([]);
+    if (imageInput.current) imageInput.current.value = "";
+  };
 
   const resetForm = () => {
     setCategoryId("");
@@ -228,8 +242,12 @@ export default function AddReferralBusinessDialog({
     setCity("");
     setRating(0);
     setFormMessage("");
-    setImagePreview(null);
-    if (imageInput.current) imageInput.current.value = "";
+    clearImages();
+  };
+
+  const removeImage = (previewUrl: string) => {
+    URL.revokeObjectURL(previewUrl);
+    updateSelectedImages(selectedImagesRef.current.filter((image) => image.previewUrl !== previewUrl));
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -242,16 +260,25 @@ export default function AddReferralBusinessDialog({
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-      event.target.value = "";
-      setImagePreview(null);
-      setFormMessage("Please upload an image of 5 MB or smaller.");
-      return;
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+
+    const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024);
+    const remainingSlots = 3 - selectedImagesRef.current.length;
+    const imagesToAdd = validFiles.slice(0, Math.max(remainingSlots, 0)).map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    if (imagesToAdd.length) updateSelectedImages([...selectedImagesRef.current, ...imagesToAdd]);
+    if (validFiles.length !== files.length) {
+      setFormMessage("Only image files up to 5 MB can be added.");
+    } else if (files.length > remainingSlots) {
+      setFormMessage("You can select a maximum of 3 images.");
+    } else {
+      setFormMessage("");
     }
-    setFormMessage("");
-    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -264,7 +291,6 @@ export default function AddReferralBusinessDialog({
     const businessEmail = String(values.get("businessEmail") ?? "").trim();
     const businessPhone = String(values.get("businessPhone") ?? "").trim();
     const review = String(values.get("review") ?? "").trim();
-    const image = values.get("image");
 
     if (businessName.length < 2) return setFormMessage("Please enter a business name.");
     if (!categoryId) return setFormMessage("Please select a category.");
@@ -280,7 +306,7 @@ export default function AddReferralBusinessDialog({
     if (businessPhone) body.append("businessPhone", businessPhone);
     if (rating) body.append("rating", String(rating));
     if (review) body.append("review", review);
-    if (image instanceof File && image.size) body.append("image", image);
+    selectedImages.forEach(({ file }) => body.append("image", file, file.name));
 
     createReferral.mutate(body, {
       onSuccess: () => {
@@ -313,10 +339,10 @@ export default function AddReferralBusinessDialog({
       </button>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-4xl overflow-y-auto gap-0 rounded-xl p-0"
+        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-4xl overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden gap-0 rounded-xl p-0"
       >
         <DialogHeader className="border-b border-[#E4E8EF] bg-[#F7F9FF] p-5 text-left sm:p-6">
-          <div className="flex items-start justify-between gap-4 pr-8">
+          <div className="pr-10">
             <div>
               <DialogTitle className="text-xl font-extrabold text-[#292D73]">
                 Refer a Business
@@ -325,12 +351,11 @@ export default function AddReferralBusinessDialog({
                 Recommend a business and share your experience. Fields marked * are required.
               </DialogDescription>
             </div>
-            <Building2 className="h-6 w-6 shrink-0 text-[#292D73]" />
           </div>
           <button
             type="button"
             onClick={() => handleOpenChange(false)}
-            className="absolute right-4 top-4 rounded-md p-1.5 text-[#667085] transition hover:bg-white hover:text-[#292D73]"
+            className="absolute right-4 top-4 rounded-full border border-[#D0D5DD] bg-white p-1.5 text-[#667085] transition hover:border-[#292D73] hover:text-[#292D73]"
             aria-label="Close referral form"
           >
             <X className="h-4 w-4" />
@@ -339,7 +364,7 @@ export default function AddReferralBusinessDialog({
 
         <form onSubmit={handleSubmit} className="space-y-5 p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="text-xs font-semibold text-[#344054] sm:col-span-2">
+            <label className="text-xs font-semibold text-[#344054]">
               Business name *
               <input name="businessName" required minLength={2} maxLength={150} placeholder="Enter the business name" className={inputClass} />
             </label>
@@ -384,21 +409,45 @@ export default function AddReferralBusinessDialog({
               Business phone
               <input name="businessPhone" type="tel" maxLength={30} placeholder="Enter phone number" className={inputClass} />
             </label>
-            <label className="text-xs font-semibold text-[#344054] sm:col-span-2 lg:col-span-1">
-              Business image (optional)
-              <span className="mt-2 flex min-h-[42px] items-center gap-2 rounded-lg border border-dashed border-[#A8B2D1] bg-[#F8FAFF] px-3 py-2 text-sm font-normal text-[#475467]">
-                <ImagePlus className="h-4 w-4 shrink-0 text-[#292D73]" />
-                <span className="min-w-0 flex-1 truncate">{imagePreview ? "Image selected" : "Upload an image"}</span>
-                <input ref={imageInput} name="image" type="file" accept="image/*" className="w-[115px] text-xs file:mr-2 file:rounded-md file:border-0 file:bg-[#E6E9FA] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#292D73]" onChange={handleImageChange} />
-              </span>
-              <span className="mt-1 block text-[11px] font-normal text-[#667085]">Maximum file size: 5 MB.</span>
-            </label>
+            <div className="text-xs font-semibold text-[#344054] sm:col-span-2 lg:col-span-3">
+              <span>Image</span>
+              <input
+                ref={imageInput}
+                id={imageInputId}
+                name="image"
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={selectedImages.length >= 3}
+                className="sr-only"
+                onChange={handleImageChange}
+              />
+              <label
+                htmlFor={imageInputId}
+                className={`mt-2 flex min-h-[78px] items-center gap-3 rounded-lg border border-dashed border-[#A8B2D1] bg-[#F8FAFF] px-3 py-3 text-sm font-normal text-[#475467] transition focus-within:border-[#292D73] focus-within:ring-2 focus-within:ring-[#292D73]/15 ${selectedImages.length >= 3 ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-[#292D73] hover:bg-[#F3F5FF]"}`}
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6E9FA] text-[#292D73]">
+                  <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-[#344054]">{selectedImages.length ? "Add more images" : "Upload images"}</span>
+                  <span id={`${imageInputId}-hint`} className="mt-0.5 block text-xs text-[#667085]">Optional · PNG, JPG, WEBP up to 5 MB each · {selectedImages.length}/3 selected</span>
+                </span>
+              </label>
+            </div>
           </div>
 
-          {imagePreview && (
-            <div className="relative h-36 overflow-hidden rounded-lg border border-[#D0D5DD] bg-[#F8FAFC] sm:h-44">
-              <Image src={imagePreview} alt="Business image preview" fill unoptimized className="object-cover" />
-              <button type="button" onClick={() => { setImagePreview(null); if (imageInput.current) imageInput.current.value = ""; }} className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-[#475467] shadow-sm hover:bg-white" aria-label="Remove business image"><X className="h-4 w-4" /></button>
+          {selectedImages.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {selectedImages.map(({ file, previewUrl }) => (
+                <div key={previewUrl} className="relative aspect-[4/3] overflow-hidden rounded-lg border border-[#D0D5DD] bg-[#F8FAFC]">
+                  <Image src={previewUrl} alt={`${file.name} preview`} fill unoptimized className="object-cover" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                    <span className="min-w-0 truncate text-xs font-medium text-white">{file.name}</span>
+                    <button type="button" onClick={() => removeImage(previewUrl)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/95 text-[#475467] shadow-sm transition hover:bg-white hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label={`Delete ${file.name}`}><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

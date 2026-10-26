@@ -45,7 +45,29 @@ type BusinessListResponse = {
   data: BusinessUser[];
 };
 
+type ReferralBusiness = {
+  id?: string;
+  _id?: string;
+  listingId?: string;
+  businessName: string;
+  category?: string;
+  businessEmail?: string;
+  email?: string;
+  claimStatus?: "claimed" | "unclaimed";
+  referredBy?: { name?: string };
+  createdAt?: string;
+};
+
+type ReferralListResponse = {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  meta: { page: number; limit: number; total: number };
+  data: ReferralBusiness[];
+};
+
 export default function BusinessManagementList() {
+  const [businessTab, setBusinessTab] = useState<"original" | "referred">("original");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -98,11 +120,37 @@ export default function BusinessManagementList() {
 
       return data;
     },
-    enabled: Boolean(accessToken),
+    enabled: Boolean(accessToken) && businessTab === "original",
+  });
+
+  const { data: referralResponse } = useQuery<ReferralListResponse>({
+    queryKey: ["referredBusinesses", deferredSearchQuery, page, accessToken],
+    queryFn: async () => {
+      const queryParams = new URLSearchParams({
+        limit: limit.toString(),
+        page: page.toString(),
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+      if (deferredSearchQuery) queryParams.set("searchTerm", deferredSearchQuery);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/business-referrals?${queryParams.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to fetch referred businesses");
+      }
+      return data;
+    },
+    enabled: Boolean(accessToken) && businessTab === "referred",
   });
 
   const businesses = businessResponse?.data ?? [];
   const totalBusinesses = businessResponse?.meta.total ?? 0;
+  const referredBusinesses = referralResponse?.data ?? [];
+  const totalReferredBusinesses = referralResponse?.meta.total ?? 0;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -175,7 +223,7 @@ export default function BusinessManagementList() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [businessTab, searchQuery, statusFilter]);
 
   // Status Badge color mapping
   const getStatusStyles = (status: string) => {
@@ -194,23 +242,37 @@ export default function BusinessManagementList() {
   return (
     <>
       <div className="w-full rounded-xl border border-gray-100 flex flex-col gap-6">
-      {/* Top Header Controls: Replaced Title with Search Input */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Search Field (Title এর জায়গায় বসেছে) */}
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Search business name, category and email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-gray-300 rounded-lg text-sm bg-white"
-          />
+        <div className="inline-flex w-full rounded-lg border border-gray-200 bg-gray-50 p-1 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setBusinessTab("original")}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition sm:flex-none ${businessTab === "original" ? "bg-white text-[#2b3674] shadow-sm" : "text-gray-500 hover:text-[#2b3674]"}`}
+          >
+            Original Business
+          </button>
+          <button
+            type="button"
+            onClick={() => setBusinessTab("referred")}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition sm:flex-none ${businessTab === "referred" ? "bg-white text-[#2b3674] shadow-sm" : "text-gray-500 hover:text-[#2b3674]"}`}
+          >
+            Refer Business
+          </button>
         </div>
 
-        {/* Right Side Status Dropdown */}
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <div className="min-w-0 flex-1 sm:w-[150px] sm:flex-none">
+        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-[290px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search business name, category and email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 border-gray-200 bg-white pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-gray-300 rounded-lg"
+            />
+          </div>
+          {businessTab === "original" && (
+            <div className="min-w-0 flex-1 sm:w-[150px] sm:flex-none">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-10 !w-full text-sm font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
                 <SelectValue placeholder="Status" />
@@ -222,11 +284,13 @@ export default function BusinessManagementList() {
                 <SelectItem value="rejected" className="text-sm cursor-pointer text-gray-600">Rejected</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+            </div>
+          )}
           <AddReferralBusinessDialog
             token={accessToken}
             onCreated={() => {
               void queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
+              void queryClient.invalidateQueries({ queryKey: ["referredBusinesses"] });
             }}
           />
         </div>
@@ -238,19 +302,35 @@ export default function BusinessManagementList() {
           {/* Dark Navy Table Header */}
           <thead>
             <tr className="bg-[#2b3674] text-white text-[11px] font-semibold uppercase tracking-wider">
-              <th className="py-3.5 pl-6 pr-4 rounded-tl-xl">Business Name</th>
+              <th className="rounded-tl-xl py-3.5 pl-6 pr-4 text-left">Business Name</th>
               <th className="py-3.5 px-4 text-center">Category</th>
-              <th className="py-3.5 px-4 text-center">Owner</th>
+              <th className="py-3.5 px-4 text-center">{businessTab === "referred" ? "Referred By" : "Owner"}</th>
               <th className="py-3.5 px-4 text-center">Email</th>
               <th className="px-4 py-3.5 text-center">Created Date</th>
-              <th className="py-3.5 px-4 text-center">Status</th>
-              <th className="py-3.5 pl-4 pr-25 text-right rounded-tr-xl">Action</th>
+              <th className={`py-3.5 px-4 text-center ${businessTab === "referred" ? "rounded-tr-xl" : ""}`}>{businessTab === "referred" ? "Claim Status" : "Status"}</th>
+              {businessTab === "original" && <th className="rounded-tr-xl px-4 py-3.5 text-center">Action</th>}
             </tr>
           </thead>
 
           {/* Table Body rows */}
           <tbody className="divide-y divide-gray-100 bg-white text-sm">
-            {businesses?.map((row) => (
+            {businessTab === "referred" ? referredBusinesses.map((row) => {
+              const email = row.businessEmail || row.email || "";
+              const referralId = row.id || row._id || row.listingId || row.businessName;
+              const claimStatus = row.claimStatus || "unclaimed";
+              return (
+                <tr key={referralId} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">{row.businessName || "N/A"}</td>
+                  <td className="py-4 px-4 text-center"><span className="rounded-md bg-[#eef2ff] px-2.5 py-1 text-xs font-medium text-[#3b4cb8]">{row.category || "N/A"}</span></td>
+                  <td className="py-4 px-4 text-center font-medium text-gray-700">{row.referredBy?.name || "Community member"}</td>
+                  <td className="py-4 px-4 text-center">
+                    {email ? <a href={`mailto:${email}`} className="break-all text-sm font-medium text-[#3b4cb8] hover:underline">{email}</a> : "N/A"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4 text-center text-gray-700">{formatDate(row.createdAt)}</td>
+                  <td className="py-4 px-4 text-center"><span className={`inline-block min-w-[85px] rounded-full border px-3 py-1 text-xs font-semibold ${claimStatus === "claimed" ? "border-[#22c55e] bg-[#f0fdf4] text-[#22c55e]" : "border-[#f59e0b] bg-[#fffbeb] text-[#f59e0b]"}`}>{claimStatus.charAt(0).toUpperCase() + claimStatus.slice(1)}</span></td>
+                </tr>
+              );
+            }) : businesses.map((row) => (
               <tr
                 key={row._id}
                 className="hover:bg-slate-50/50 transition-colors"
@@ -299,7 +379,7 @@ export default function BusinessManagementList() {
 
                 {/* Action Buttons Column */}
                 <td className="py-4 pl-4 pr-6">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     {row.status.toLowerCase() !== "active" && (
                       <button
                         type="button"
@@ -356,13 +436,13 @@ export default function BusinessManagementList() {
                 </td>
               </tr>
             ))}
-            {businesses.length === 0 && (
+            {(businessTab === "referred" ? referredBusinesses.length : businesses.length) === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={businessTab === "referred" ? 6 : 7}
                   className="py-8 text-center text-sm font-medium text-gray-500"
                 >
-                  No businesses found
+                  {businessTab === "referred" ? "No referred businesses found" : "No businesses found"}
                 </td>
               </tr>
             )}
@@ -374,8 +454,8 @@ export default function BusinessManagementList() {
       <Pagination
         page={page}
         limit={limit}
-        total={totalBusinesses}
-        currentCount={businesses.length}
+        total={businessTab === "referred" ? totalReferredBusinesses : totalBusinesses}
+        currentCount={businessTab === "referred" ? referredBusinesses.length : businesses.length}
         onPageChange={setPage}
       />
       </div>

@@ -3,7 +3,7 @@
 import { formatDate } from "@/lib/format-date";
 
 import React, { useDeferredValue, useEffect, useState } from "react";
-import { Search, Eye, Mail } from "lucide-react";
+import { Search, Eye, Mail, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/select";
 import Pagination from "@/components/pagination/Pagination";
 import ViewBusiness from "./ViewBusiness";
+import ViewReferralBusiness from "./ViewReferralBusiness";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import RejectModal from "@/components/rejectModal/RejectModal";
+import DeleteModal from "@/components/deleteModal/DeleteModal";
 import AddReferralBusinessDialog from "./AddReferralBusinessDialog";
 
 type BusinessUser = {
@@ -70,11 +71,19 @@ export default function BusinessManagementList() {
   const [businessTab, setBusinessTab] = useState<"original" | "referred">("original");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [claimStatusFilter, setClaimStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
     null,
   );
-  const [businessToReject, setBusinessToReject] = useState<{
+  const [selectedReferralId, setSelectedReferralId] = useState<string | null>(
+    null,
+  );
+  const [businessToDelete, setBusinessToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [referralToDelete, setReferralToDelete] = useState<{
     id: string;
     name: string;
   } | null>(null);
@@ -124,7 +133,13 @@ export default function BusinessManagementList() {
   });
 
   const { data: referralResponse } = useQuery<ReferralListResponse>({
-    queryKey: ["referredBusinesses", deferredSearchQuery, page, accessToken],
+    queryKey: [
+      "referredBusinesses",
+      claimStatusFilter,
+      deferredSearchQuery,
+      page,
+      accessToken,
+    ],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         limit: limit.toString(),
@@ -132,10 +147,11 @@ export default function BusinessManagementList() {
         sortBy: "createdAt",
         sortOrder: "desc",
       });
+      if (claimStatusFilter !== "all") queryParams.set("claimStatus", claimStatusFilter);
       if (deferredSearchQuery) queryParams.set("searchTerm", deferredSearchQuery);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/business-referrals?${queryParams.toString()}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/business-referrals/admin/all?${queryParams.toString()}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
       const data = await response.json();
@@ -186,17 +202,17 @@ export default function BusinessManagementList() {
     },
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (businessId: string) => {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${id}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${businessId}`,
         {
-          method: "PUT",
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ status: "rejected", reason }),
+          body: JSON.stringify({ profileRole: "all", reason: "Business deleted by admin" }),
         }
       );
       const data = await response.json().catch(() => ({}));
@@ -205,14 +221,15 @@ export default function BusinessManagementList() {
         const errorMessage = Array.isArray(data?.message)
           ? data.message[0]
           : data?.message;
-        throw new Error(errorMessage || "Failed to reject business");
+        throw new Error(errorMessage || "Failed to delete business");
       }
 
       return data;
     },
     onSuccess: (data) => {
-      toast.success(data?.message || "Business rejected successfully");
-      setBusinessToReject(null);
+      toast.success(data?.message || "Business and all information deleted successfully");
+      setBusinessToDelete(null);
+      if (businesses.length === 1 && page > 1) setPage((current) => current - 1);
       queryClient.invalidateQueries({ queryKey: ["managedUsers"] });
       queryClient.invalidateQueries({ queryKey: ["managedUser"] });
       queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
@@ -221,9 +238,40 @@ export default function BusinessManagementList() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const deleteReferralMutation = useMutation({
+    mutationFn: async (referralId: string) => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/business-referrals/${referralId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.success) {
+        const errorMessage = Array.isArray(data?.message)
+          ? data.message[0]
+          : data?.message;
+        throw new Error(errorMessage || "Failed to delete referral");
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Business referral deleted successfully");
+      setReferralToDelete(null);
+      if (referredBusinesses.length === 1 && page > 1) setPage((current) => current - 1);
+      queryClient.invalidateQueries({ queryKey: ["referredBusinesses"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   useEffect(() => {
     setPage(1);
-  }, [businessTab, searchQuery, statusFilter]);
+  }, [businessTab, searchQuery, statusFilter, claimStatusFilter]);
 
   // Status Badge color mapping
   const getStatusStyles = (status: string) => {
@@ -271,7 +319,7 @@ export default function BusinessManagementList() {
               className="h-10 border-gray-200 bg-white pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-gray-300 rounded-lg"
             />
           </div>
-          {businessTab === "original" && (
+          {businessTab === "original" ? (
             <div className="min-w-0 flex-1 sm:w-[150px] sm:flex-none">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-10 !w-full text-sm font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
@@ -282,6 +330,19 @@ export default function BusinessManagementList() {
                 <SelectItem value="active" className="text-sm cursor-pointer text-gray-600">Active</SelectItem>
                 <SelectItem value="pending" className="text-sm cursor-pointer text-gray-600">Pending</SelectItem>
                 <SelectItem value="rejected" className="text-sm cursor-pointer text-gray-600">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1 sm:w-[160px] sm:flex-none">
+            <Select value={claimStatusFilter} onValueChange={setClaimStatusFilter}>
+              <SelectTrigger className="h-10 !w-full text-sm font-medium text-gray-600 border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-gray-300 rounded-lg bg-white">
+                <SelectValue placeholder="Claim Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border-gray-100 shadow-lg">
+                <SelectItem value="all" className="text-sm cursor-pointer text-gray-600">All Referrals</SelectItem>
+                <SelectItem value="unclaimed" className="text-sm cursor-pointer text-gray-600">Unclaimed</SelectItem>
+                <SelectItem value="claimed" className="text-sm cursor-pointer text-gray-600">Claimed</SelectItem>
               </SelectContent>
             </Select>
             </div>
@@ -307,8 +368,8 @@ export default function BusinessManagementList() {
               <th className="py-3.5 px-4 text-center">{businessTab === "referred" ? "Referred By" : "Owner"}</th>
               <th className="py-3.5 px-4 text-center">Email</th>
               <th className="px-4 py-3.5 text-center">Created Date</th>
-              <th className={`py-3.5 px-4 text-center ${businessTab === "referred" ? "rounded-tr-xl" : ""}`}>{businessTab === "referred" ? "Claim Status" : "Status"}</th>
-              {businessTab === "original" && <th className="rounded-tr-xl px-4 py-3.5 text-center">Action</th>}
+              <th className="py-3.5 px-4 text-center">{businessTab === "referred" ? "Claim Status" : "Status"}</th>
+              <th className="rounded-tr-xl px-4 py-3.5 text-center">Action</th>
             </tr>
           </thead>
 
@@ -316,11 +377,18 @@ export default function BusinessManagementList() {
           <tbody className="divide-y divide-gray-100 bg-white text-sm">
             {businessTab === "referred" ? referredBusinesses.map((row) => {
               const email = row.businessEmail || row.email || "";
-              const referralId = row.id || row._id || row.listingId || row.businessName;
+              const referralId = String(row.id || row._id || row.listingId || "");
               const claimStatus = row.claimStatus || "unclaimed";
               return (
-                <tr key={referralId} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">{row.businessName || "N/A"}</td>
+                <tr key={referralId || row.businessName} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="py-4 pl-6 pr-4 font-semibold text-[#3b4cb8]">
+                    <span
+                      onClick={() => setSelectedReferralId(referralId)}
+                      className="cursor-pointer hover:underline"
+                    >
+                      {row.businessName || "N/A"}
+                    </span>
+                  </td>
                   <td className="py-4 px-4 text-center"><span className="rounded-md bg-[#eef2ff] px-2.5 py-1 text-xs font-medium text-[#3b4cb8]">{row.category || "N/A"}</span></td>
                   <td className="py-4 px-4 text-center font-medium text-gray-700">{row.referredBy?.name || "Community member"}</td>
                   <td className="py-4 px-4 text-center">
@@ -328,6 +396,33 @@ export default function BusinessManagementList() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-center text-gray-700">{formatDate(row.createdAt)}</td>
                   <td className="py-4 px-4 text-center"><span className={`inline-block min-w-[85px] rounded-full border px-3 py-1 text-xs font-semibold ${claimStatus === "claimed" ? "border-[#22c55e] bg-[#f0fdf4] text-[#22c55e]" : "border-[#f59e0b] bg-[#fffbeb] text-[#f59e0b]"}`}>{claimStatus.charAt(0).toUpperCase() + claimStatus.slice(1)}</span></td>
+                  <td className="py-4 pl-4 pr-6">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReferralId(referralId)}
+                        aria-label={`View ${row.businessName}`}
+                        title="View Referral Details"
+                        className="cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] shadow-sm transition-colors hover:border-[#2b3674] hover:bg-[#eef2ff]"
+                      >
+                        <Eye className="w-4 h-4 stroke-[2]" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deleteReferralMutation.isPending}
+                        onClick={() =>
+                          setReferralToDelete({
+                            id: referralId,
+                            name: row.businessName,
+                          })
+                        }
+                        aria-label={`Delete ${row.businessName}`}
+                        className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
             }) : businesses.map((row) => (
@@ -399,28 +494,9 @@ export default function BusinessManagementList() {
                     )}
                     <button
                       type="button"
-                      onClick={() =>
-                        setBusinessToReject({
-                          id: row._id,
-                          name:
-                            row.businessProfile?.businessName ||
-                            row.businessName ||
-                            row.username ||
-                            [row.firstName, row.lastName]
-                              .filter(Boolean)
-                              .join(" ") ||
-                            row.email,
-                        })
-                      }
-                      className="h-7 cursor-pointer rounded-md bg-[#dc2626] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-600"
-                    >
-                      Reject
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setSelectedBusinessId(row._id)}
                       aria-label={`View ${row.username || row.email}`}
-                      className="ml-1 cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] shadow-sm transition-colors hover:border-[#2b3674] hover:bg-[#eef2ff]"
+                      className="cursor-pointer rounded-md border border-[#2b3674]/25 p-1.5 text-[#2b3674] shadow-sm transition-colors hover:border-[#2b3674] hover:bg-[#eef2ff]"
                     >
                       <Eye className="w-4 h-4 stroke-[2]" />
                     </button>
@@ -432,6 +508,27 @@ export default function BusinessManagementList() {
                     >
                       <Mail className="h-4 w-4 stroke-[2]" />
                     </a>
+                    <button
+                      type="button"
+                      disabled={deleteMutation.isPending}
+                      onClick={() =>
+                        setBusinessToDelete({
+                          id: row._id,
+                          name:
+                            row.businessProfile?.businessName ||
+                            row.businessName ||
+                            row.username ||
+                            [row.firstName, row.lastName]
+                              .filter(Boolean)
+                              .join(" ") ||
+                            row.email,
+                        })
+                      }
+                      aria-label={`Delete ${row.businessProfile?.businessName || row.email}`}
+                      className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -439,7 +536,7 @@ export default function BusinessManagementList() {
             {(businessTab === "referred" ? referredBusinesses.length : businesses.length) === 0 && (
               <tr>
                 <td
-                  colSpan={businessTab === "referred" ? 6 : 7}
+                  colSpan={7}
                   className="py-8 text-center text-sm font-medium text-gray-500"
                 >
                   {businessTab === "referred" ? "No referred businesses found" : "No businesses found"}
@@ -468,19 +565,52 @@ export default function BusinessManagementList() {
         />
       )}
 
-      <RejectModal
-        isOpen={businessToReject !== null}
-        onClose={() => !rejectMutation.isPending && setBusinessToReject(null)}
-        onConfirm={(reason) =>
-          businessToReject &&
-          !rejectMutation.isPending &&
-          rejectMutation.mutate({
-            id: businessToReject.id,
-            reason,
-          })
+      {selectedReferralId && (
+        <ViewReferralBusiness
+          isOpen
+          onClose={() => setSelectedReferralId(null)}
+          referralId={selectedReferralId}
+        />
+      )}
+
+      <DeleteModal
+        confirmLabel="Confirm"
+        isOpen={Boolean(businessToDelete)}
+        onClose={() =>
+          !deleteMutation.isPending && setBusinessToDelete(null)
         }
-        itemName={businessToReject?.name || "this business"} 
-        isRejecting={rejectMutation.isPending}
+        onConfirm={() =>
+          businessToDelete &&
+          !deleteMutation.isPending &&
+          deleteMutation.mutate(businessToDelete.id)
+        }
+        description={
+          businessToDelete
+            ? "This will permanently delete this business account and all related data. The user will be able to register a new account with this information."
+            : undefined
+        }
+        itemName={businessToDelete?.name || "this business"}
+        isDeleting={deleteMutation.isPending}
+      />
+
+      <DeleteModal
+        confirmLabel="Confirm"
+        isOpen={Boolean(referralToDelete)}
+        onClose={() =>
+          !deleteReferralMutation.isPending && setReferralToDelete(null)
+        }
+        onConfirm={() =>
+          referralToDelete &&
+          !deleteReferralMutation.isPending &&
+          deleteReferralMutation.mutate(referralToDelete.id)
+        }
+        description={
+          referralToDelete
+            ? "This will permanently delete this business referral. This action cannot be undone."
+            : undefined
+        }
+        itemName={referralToDelete?.name || "this referral"}
+        isDeleting={deleteReferralMutation.isPending}
       />
     </>
   );

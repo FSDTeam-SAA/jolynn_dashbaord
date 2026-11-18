@@ -109,17 +109,8 @@ export default function UserManagementList() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const getDeleteProfileRole = (user: ManagedUser) => {
-    const roles = user.roles?.length ? user.roles : [user.role];
-    if (roles.includes("businessOwner")) return "businessOwner";
-    if (roles.includes("user")) return "user";
-    return undefined;
-  };
-
   const deleteMutation = useMutation({
     mutationFn: async (user: ManagedUser) => {
-      const profileRole = getDeleteProfileRole(user);
-      if (!profileRole) throw new Error("This account has no deletable personal or business profile.");
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/user/${user._id}`,
         {
@@ -128,7 +119,7 @@ export default function UserManagementList() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ profileRole }),
+          body: JSON.stringify({ profileRole: "all", reason: "User deleted by admin" }),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -136,14 +127,10 @@ export default function UserManagementList() {
         throw new Error(data?.message || "Failed to delete user");
       return data;
     },
-    onSuccess: (data, deletedUser) => {
-      toast.success(data?.message || "User deleted successfully");
+    onSuccess: (data) => {
+      toast.success(data?.message || "User and all information deleted successfully");
       setUserToDelete(null);
-      const roles = deletedUser.roles?.length ? deletedUser.roles : [deletedUser.role];
-      const remainsInList = roles.some(
-        (role) => role !== getDeleteProfileRole(deletedUser) && (roleFilter === "all" || roleFilter === role),
-      );
-      if (!remainsInList && users.length === 1 && page > 1) setPage((current) => current - 1);
+      if (users.length === 1 && page > 1) setPage((current) => current - 1);
       setSelectedUserId(null);
       queryClient.invalidateQueries({ queryKey: ["businessUsers"] });
       queryClient.invalidateQueries({ queryKey: ["businessUser"] });
@@ -283,7 +270,7 @@ export default function UserManagementList() {
                         </a>
                         <button
                           onClick={() => setUserToDelete(user)}
-                          disabled={deleteMutation.isPending || !getDeleteProfileRole(user)}
+                          disabled={deleteMutation.isPending}
                           aria-label={`Delete ${displayName}`}
                           className="cursor-pointer rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -331,7 +318,7 @@ export default function UserManagementList() {
         onConfirm={() =>
           userToDelete && !deleteMutation.isPending && deleteMutation.mutate(userToDelete)
         }
-        description={userToDelete ? `This will delete the ${getDeleteProfileRole(userToDelete) === "businessOwner" ? "business" : "personal"} profile and its related data. If both profiles exist, the business profile is deleted first and the personal profile remains. You can delete the personal profile separately afterward. If this is the last profile, the account will also be deleted.` : undefined}
+        description={userToDelete ? "This will permanently delete this user account and all related data. The user will be able to register a new account with this information." : undefined}
         itemName={
           userToDelete?.username ||
           [userToDelete?.firstName, userToDelete?.lastName]
